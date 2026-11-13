@@ -22,11 +22,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar leitor PDF.js
+        run: npm install --no-audit --no-fund
       - name: Preparar somente os arquivos da PWA
         run: |
           mkdir -p site-dist
           cp index.html manifest.webmanifest sw.js site-dist/
-          cp -R src assets site-dist/
+          cp -R src assets vendor site-dist/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

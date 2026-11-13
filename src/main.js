@@ -1,6 +1,9 @@
 import {makeDemo,makeBlank} from './demo.js';
 import {allCampaigns,getCampaign,saveCampaign,removeCampaign,saveBlob,getBlob,blobToDataUrl,exportCampaign,importCampaign} from './storage.js';
 import {roll,uid} from './rules.js';
+import {parseSheetText,parseSheetJson,buildImportedSheet} from './sheet-import.js';
+import {extractPdfText} from './pdf-reader.js';
+import {snapTokenPosition} from './grid.js';
 import {initBoard,invalidate,fitScene,makePublicMaps,scene,toWorld,zoomAt} from './board.js';
 import {renderUI,initUI} from './ui.js';
 import {createRoom,joinRoom,resumeRoom,closeRoom,submitMaster,submitPlayer,submitMovement,subscribe,sendAudio,checkServer,setServerURL,serverURL,readInvitation,inviteURL} from './network.js';
@@ -9,7 +12,7 @@ const ACTIVE_KEY='tenebria:active-session';
 const toastEl=document.getElementById('toast');let toastTimeout=null;
 export const app={
   role:'master',playerId:null,mode:'presencial',homeOpen:!invitation.room,campaign:null,campaigns:[],camera:{x:0,y:0,zoom:1},tool:'select',showFog:true,
-  selectedTokenId:null,selectedSheetId:null,selectedTab:'maps',panelOpen:window.innerWidth>750,online:null,
+  selectedTokenId:null,selectedSheetId:null,sheetImportDraft:null,sheetImportErrors:[],selectedTab:'maps',panelOpen:window.innerWidth>750,online:null,
   roomInfo:null,rollInput:'1D20',rollPrivate:false,playerCode:invitation.code||'',roomInput:invitation.room||'',projectorCode:'',audioTarget:'local',audioUnlocked:false,pendingAudio:null,volume:.75,loop:false,
   get serverAddress(){return serverURL();},
   invite(role,code){return inviteURL(this.roomInput,role,code);},
@@ -99,6 +102,58 @@ export const app={
   },
   async importTokenImage(file){const s=scene(),t=s.tokens.find(t=>t.id===this.selectedTokenId);if(!t||this.role!=='master')return;
     const bitmap=await createImageBitmap(file),cv=document.createElement('canvas');cv.width=256;cv.height=256;cv.getContext('2d').drawImage(bitmap,0,0,256,256);bitmap.close();t.img=cv.toDataURL('image/webp',.82);this.changed('Imagem do token atualizada');this.render();
+  },
+  async analyzeSheetFile(file){
+    if(this.role!=='master'||!file)return;
+    try{
+      if(file.size>12_000_000)throw Error('Arquivo acima de 12 MB.');
+      const ext=file.name.toLowerCase().split('.').pop();let preview,pdfResult=null;
+      if(ext==='pdf'){
+        pdfResult=await extractPdfText(file);
+        preview=parseSheetText(pdfResult.text,{filename:file.name,format:'pdf'});
+        if(pdfResult.truncated)preview.warnings.push(`PDF com ${pdfResult.pagesTotal} páginas; apenas ${pdfResult.pagesRead} foram examinadas.`);
+      }else if(ext==='json')preview=parseSheetJson(await file.text(),{filename:file.name});
+      else if(ext==='txt')preview=parseSheetText(await file.text(),{filename:file.name,format:'txt'});
+      else throw Error('Selecione PDF com texto, TXT ou JSON de personagem.');
+      preview.file=ext==='pdf'?file:null;
+      this.sheetImportDraft=preview;this.sheetImportErrors=[];
+      this.selectedTab='sheets';this.panelOpen=true;this.render();
+      this.toast('Dados lidos. Confira e confirme a ficha antes de salvar.');
+    }catch(e){this.sheetImportErrors=[];this.toast('Importação: '+e.message);}
+  },
+  async confirmSheetImport(overrides,createToken=false){
+    if(this.role!=='master'||!this.sheetImportDraft)return false;
+    const {sheet,errors}=buildImportedSheet(this.sheetImportDraft,overrides);
+    this.sheetImportErrors=errors;
+    if(errors.length){
+      // Preserve edits after a failed review; do not erase values entered on mobile.
+      this.sheetImportDraft.data={...this.sheetImportDraft.data,...overrides,attributes:{...this.sheetImportDraft.data.attributes,physical:overrides.physical,skill:overrides.skill,vigor:overrides.vigor,mental:overrides.mental}};
+      this.render();this.toast('Corrija os campos assinalados na revisão.');return false;
+    }
+    try{
+      if(this.sheetImportDraft.file){const key=uid();await saveBlob(key,this.sheetImportDraft.file);sheet.pdfKey=key;sheet.pdfName=this.sheetImportDraft.file.name;}
+      this.campaign.sheets.push(sheet);this.selectedSheetId=sheet.id;
+      if(createToken){
+        const current=this.campaign.scenes.find(sc=>sc.id===this.campaign.sceneId);
+        if(current){
+          const size=current.grid?.size||60;
+          const occupied=new Set(current.tokens.map(t=>`${Math.round(t.x)}:${Math.round(t.y)}`));
+          let position={x:current.width/2,y:current.height/2};
+          for(let i=0;i<35;i++){
+            const dx=i%7-3,dy=Math.floor(i/7)-2;
+            const candidate=snapTokenPosition(current.width/2+dx*size,current.height/2+dy*size,current,!!this.campaign.settings?.snap);
+            if(!occupied.has(`${Math.round(candidate.x)}:${Math.round(candidate.y)}`)){position=candidate;break;}
+          }
+          const token={id:uid(),sheetId:sheet.id,name:sheet.name,...position,size:Math.min(54,size),rotation:0,visible:true,locked:false,ownerId:null,hp:sheet.hp,maxHp:sheet.maxHp,color:'#c3a274',conditions:[]};
+          current.tokens.push(token);this.selectedTokenId=token.id;
+        }
+      }
+      this.sheetImportDraft=null;this.sheetImportErrors=[];
+      // Ensure the imported sheet is durable even if the tab is closed immediately.
+      await saveCampaign(this.campaign);this.campaigns=await allCampaigns();
+      this.changed('Personagem criado a partir da ficha.');this.render();
+      return true;
+    }catch(e){this.toast('Não foi possível salvar a ficha: '+e.message);return false;}
   },
   async importSheetPdf(file){if(this.role!=='master')return;const sheet=this.campaign.sheets.find(s=>s.id===this.selectedSheetId);if(!sheet)return;if(file.type!=='application/pdf'||file.size>15_000_000){this.toast('Selecione um PDF com até 15 MB.');return;}const key=uid();await saveBlob(key,file);sheet.pdfKey=key;sheet.pdfName=file.name;this.changed('PDF anexado à ficha');this.render();},
   async viewSheetPdf(){const sheet=this.campaign.sheets.find(s=>s.id===this.selectedSheetId);if(!sheet?.pdfKey)return;const blob=await getBlob(sheet.pdfKey);if(!blob){this.toast('PDF disponível apenas no dispositivo que anexou o arquivo.');return;}const url=URL.createObjectURL(blob);window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),60000);},
