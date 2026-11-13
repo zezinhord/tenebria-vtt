@@ -1,0 +1,5 @@
+.local-rooms
+node_modules
+.git
+*.zip
+screens-*.png

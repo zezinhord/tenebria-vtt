@@ -1,0 +1,5 @@
+const CACHE='tenebria-vtt-0.1.0';const FILES=['./','./index.html','./src/style.css','./src/main.js','./src/ui.js','./src/board.js','./src/rules.js','./src/storage.js','./src/demo.js','./src/network.js','./manifest.webmanifest','./assets/icon.svg','./assets/dungeon.svg','./assets/village.svg','./assets/sino_cripta.wav','./assets/espada.wav','./assets/vento_sombrio.wav'];
+self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)));self.skipWaiting();});
+self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(names=>Promise.all(names.filter(n=>n!==CACHE).map(n=>caches.delete(n)))));self.clients.claim();});
+self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(event.request.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/'))return;
+  event.respondWith(caches.match(event.request).then(hit=>hit||fetch(event.request).then(resp=>{if(resp.ok){const clone=resp.clone();caches.open(CACHE).then(c=>c.put(event.request,clone));}return resp;})));});
