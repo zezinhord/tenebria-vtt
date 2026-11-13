@@ -1,8 +1,8 @@
-# TENEBRIA VTT 0.1.0 — PWA de mesa virtual
+# TENEBRIA VTT 0.1.1 — PWA de mesa virtual
 
 Aplicação real de mesa virtual **2D**, sem dependências de npm, para RPG **Tenebria Revisado 3.0**. Construída como PWA em JavaScript, Canvas 2D, IndexedDB e Node.js HTTP + Server-Sent Events (SSE). **Não é um APK**: roda no navegador e pode ser instalada como PWA onde o navegador permitir.
 
-## O que funciona na 0.1.0
+## O que funciona na 0.1.1
 
 - Campanhas locais, nova campanha, demo, seleção, edição, salvamento automático por IndexedDB, importação/exportação `.json` (áudios e PDFs anexados incluídos quando disponíveis).
 - Dois mapas demonstrativos editáveis (masmorra **Cripta sob a Vigília** e povoado **Corval**); importação de PNG/JPEG/WebP convertidos localmente para WebP até 1800 × 1300; zoom por pinça, roda, arrasto, centralização, grade quadrada configurável e alinhamento opcional.
@@ -86,3 +86,6 @@ Execute `npm test`. Foram criados testes automatizados para atributos/limites, g
 A inspeção gráfica automatizada por Chromium **não foi possível neste ambiente** por política de bloqueio administrativo do navegador; portanto, renderização, touch real, áudio Android, tela cheia e acesso ao projetor HY3000 **não foram comprovados em hardware**. Não foi realizado teste funcional em um Moto G34 ou projetor HY3000. A compatibilidade deve ser validada no dispositivo, com alternativa de reprodução usando um computador/TV box/celular externo conectado ao projetor.
 
 **Limitações 0.1.0:** iluminação dinâmica, grade hexagonal, áreas de efeito sofisticadas, dados 3D, transmissão de áudio remoto, armazenamento remoto de mapas/áudio em objeto dedicado, reconexão segura avançada, gerenciamento completo de condições/skills de todas as classes e importação automática de PDFs estão fora do escopo atual. A sala remota depende de hospedagem e disponibilidade do Node, e os arquivos de áudio/PDF importados permanecem no dispositivo original. Servidor público requer HTTPS, backup do diretório de salas, limites de uso, proteção contra abuso e política de retenção antes de exposição ampla.
+## Correção 0.1.1 — estabilidade do tabuleiro Android
+
+Foi removida a opção de Canvas `desynchronized` para evitar a apresentação de quadros incompletos no Android, o observador de tamanho passou a acompanhar o contêiner e só redimensiona o bitmap quando necessário. Mapas e grades são pré-renderizados e reutilizados durante o arrasto de tokens, reduzindo o trabalho da GPU. O cache offline recebeu uma nova versão. Se o navegador mantiver a interface antiga, feche todas as abas do site e reabra a PWA após a atualização. Ainda é necessário validar a correção em Moto G34 e HY3000.

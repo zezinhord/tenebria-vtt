@@ -1,15 +1,51 @@
 import {uid} from './rules.js';
 let canvas,ctx,app,cache=new Map(),pointers=new Map(),drag=null,pinch=null,dirty=true;
+// Keep the static scene bitmap separate from moving tokens to reduce mobile GPU work.
+let staticScene=null;
 export function scene(){return app.campaign?.scenes.find(s=>s.id===app.campaign.sceneId)||app.campaign?.scenes[0];}
 export function invalidate(){dirty=true;}
-export function initBoard(a){app=a;canvas=document.getElementById('board');ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
-  if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>{fitSize();invalidate();}).observe(canvas);else window.addEventListener('resize',()=>{fitSize();invalidate();});fitSize();
+export function initBoard(a){app=a;canvas=document.getElementById('board');ctx=canvas.getContext('2d',{alpha:false});
+  // A desynchronized canvas can expose incomplete paints (flashing/tearing) on Android.
+  // Observe the containing stage, not the canvas whose intrinsic bitmap is resized.
+  if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>fitSize()).observe(canvas.parentElement);else window.addEventListener('resize',fitSize);fitSize();
   canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
   canvas.addEventListener('wheel',wheel,{passive:false});canvas.addEventListener('dblclick',()=>fitScene());
   canvas.addEventListener('contextmenu',e=>e.preventDefault());requestAnimationFrame(frame);
 }
-function fitSize(){const box=canvas.getBoundingClientRect();const dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(box.width*dpr);canvas.height=Math.round(box.height*dpr);}
+function fitSize(){
+  const box=canvas.getBoundingClientRect();
+  if(box.width<1||box.height<1)return;
+  const dpr=Math.min(window.devicePixelRatio||1,1.75);
+  const width=Math.max(1,Math.round(box.width*dpr)),height=Math.max(1,Math.round(box.height*dpr));
+  // Assigning width/height clears the canvas even when the numeric value is unchanged.
+  if(canvas.width===width&&canvas.height===height)return;
+  if(canvas.width!==width)canvas.width=width;
+  if(canvas.height!==height)canvas.height=height;
+  invalidate();
+}
 const imgFor=src=>{if(!src)return null;if(!cache.has(src)){const im=new Image();const obj={im,ready:false};cache.set(src,obj);im.onload=()=>{obj.ready=true;invalidate();};im.onerror=()=>{obj.failed=true;invalidate();};im.src=src;}return cache.get(src);};
+function sceneBackdrop(s){
+  const img=imgFor(s.src);
+  const g=s.grid||{};
+  const params={id:s.id,src:s.src,width:s.width,height:s.height,gridEnabled:!!g.enabled,gridSize:g.size||60,imageReady:!!img?.ready};
+  if(staticScene&&Object.keys(params).every(k=>staticScene[k]===params[k]))return staticScene.canvas;
+  // Cap the offscreen buffer to protect low-memory Android devices.
+  const scale=Math.min(1,2048/s.width,2048/s.height,Math.sqrt(3_000_000/(s.width*s.height)));
+  const buffer=document.createElement('canvas');
+  buffer.width=Math.max(1,Math.round(s.width*scale));buffer.height=Math.max(1,Math.round(s.height*scale));
+  const painter=buffer.getContext('2d',{alpha:false});
+  painter.setTransform(buffer.width/s.width,0,0,buffer.height/s.height,0,0);
+  painter.fillStyle='#393532';painter.fillRect(0,0,s.width,s.height);
+  if(img?.ready){try{painter.drawImage(img.im,0,0,s.width,s.height);}catch{}}
+  if(!s.src){painter.fillStyle='#605144';painter.font='32px Georgia';painter.textAlign='center';painter.fillText('IMPORTE UM MAPA',s.width/2,s.height/2);}
+  if(g.enabled){
+    const step=Math.max(10,g.size||60);
+    painter.beginPath();for(let x=0;x<=s.width;x+=step){painter.moveTo(x,0);painter.lineTo(x,s.height);}
+    for(let y=0;y<=s.height;y+=step){painter.moveTo(0,y);painter.lineTo(s.width,y);}
+    painter.lineWidth=1;painter.strokeStyle='rgba(224,197,150,.23)';painter.stroke();
+  }
+  staticScene={...params,canvas:buffer};return buffer;
+}
 export function fitScene(){const s=scene();if(!s)return;const b=canvas.getBoundingClientRect();const z=Math.min(b.width/s.width,b.height/s.height)*.97;app.camera={zoom:z,x:(b.width-s.width*z)/2,y:(b.height-s.height*z)/2};invalidate();}
 const bounds=()=>canvas.getBoundingClientRect();
 function point(e){const r=bounds();return {x:e.clientX-r.left,y:e.clientY-r.top};}
@@ -57,10 +93,8 @@ function frame(){if(dirty)paint();requestAnimationFrame(frame);}
 function paint(){dirty=false;if(!canvas.width||!canvas.height)return;const box=bounds(),dpr=canvas.width/box.width,w=box.width,h=box.height,s=scene();ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.fillStyle='#121317';ctx.fillRect(0,0,w,h);if(!s)return;
   ctx.save();ctx.translate(app.camera.x,app.camera.y);ctx.scale(app.camera.zoom,app.camera.zoom);
-  const image=imgFor(s.src);ctx.fillStyle='#393532';ctx.fillRect(0,0,s.width,s.height);
-  if(image?.ready)try{ctx.drawImage(image.im,0,0,s.width,s.height);}catch{}
-  if(!s.src){ctx.fillStyle='#605144';ctx.font='32px Georgia';ctx.textAlign='center';ctx.fillText('IMPORTE UM MAPA',s.width/2,s.height/2);}
-  if(s.grid?.enabled){const step=Math.max(10,s.grid.size||60);ctx.beginPath();for(let x=0;x<=s.width;x+=step){ctx.moveTo(x,0);ctx.lineTo(x,s.height);}for(let y=0;y<=s.height;y+=step){ctx.moveTo(0,y);ctx.lineTo(s.width,y);}ctx.lineWidth=1/Math.max(.2,app.camera.zoom);ctx.strokeStyle='rgba(224,197,150,.23)';ctx.stroke();}
+  // Draw the map and grid from a cached bitmap; only tokens/fog are redrawn on drag.
+  ctx.drawImage(sceneBackdrop(s),0,0,s.width,s.height);
   for(const marker of s.markers||[]){ctx.fillStyle='#e0b976';ctx.beginPath();ctx.arc(marker.x,marker.y,8,0,Math.PI*2);ctx.fill();ctx.font='17px system-ui';ctx.fillText(marker.text||'Marcador',marker.x+12,marker.y);}
   for(const t of s.tokens||[]){if(app.role!=='master' && t.visible===false)continue;const r=(t.size||54)/2;
     ctx.save();ctx.translate(t.x,t.y);ctx.rotate((t.rotation||0)*Math.PI/180);

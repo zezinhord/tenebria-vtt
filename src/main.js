@@ -92,6 +92,6 @@ async function init(){try{app.campaigns=await allCampaigns();const last=localSto
     initBoard(app);initUI(app);app.render();fitScene();
     const room=params.get('room'),role=params.get('role');if(room&&role==='projector')await app.connect('projector',room,'');
     else if(room){app.roomInput=room;app.selectedTab='session';app.render();}
-    if('serviceWorker' in navigator&&['http:','https:'].includes(location.protocol))navigator.serviceWorker.register('sw.js').catch(console.warn);
+    if('serviceWorker' in navigator&&['http:','https:'].includes(location.protocol))navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).catch(console.warn);
   }catch(e){console.error(e);app.toast('Erro ao iniciar: '+e.message);}}
 init();
