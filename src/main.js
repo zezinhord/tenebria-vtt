@@ -1,7 +1,7 @@
 import {makeDemo,makeBlank} from './demo.js';
 import {allCampaigns,getCampaign,saveCampaign,removeCampaign,saveBlob,getBlob,blobToDataUrl,exportCampaign,importCampaign} from './storage.js';
 import {roll,uid} from './rules.js';
-import {parseSheetText,parseSheetJson,buildImportedSheet} from './sheet-import.js';
+import {parseSheetText,parseSheetPdf,parseSheetJson,buildImportedSheet} from './sheet-import.js';
 import {extractPdfText} from './pdf-reader.js';
 import {snapTokenPosition} from './grid.js';
 import {initBoard,invalidate,fitScene,makePublicMaps,scene,toWorld,zoomAt} from './board.js';
@@ -110,7 +110,7 @@ export const app={
       const ext=file.name.toLowerCase().split('.').pop();let preview,pdfResult=null;
       if(ext==='pdf'){
         pdfResult=await extractPdfText(file);
-        preview=parseSheetText(pdfResult.text,{filename:file.name,format:'pdf'});
+        preview=parseSheetPdf(pdfResult.text,{filename:file.name,fields:pdfResult.fields});
         if(pdfResult.truncated)preview.warnings.push(`PDF com ${pdfResult.pagesTotal} páginas; apenas ${pdfResult.pagesRead} foram examinadas.`);
       }else if(ext==='json')preview=parseSheetJson(await file.text(),{filename:file.name});
       else if(ext==='txt')preview=parseSheetText(await file.text(),{filename:file.name,format:'txt'});

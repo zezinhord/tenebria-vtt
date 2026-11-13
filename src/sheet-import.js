@@ -1,5 +1,6 @@
 // Importador conservador de fichas: não inventa valores nem aplica bônus raciais implícitos.
 import {RACES,RACE_NAMES,CLASS_NAMES,ATTRIBUTE_KEYS,validateAttributes,uid} from './rules.js';
+import {extractTenebriaForm} from './tenebria-form.js';
 
 const normalize=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const canonical=(value,known)=>known.find(v=>normalize(v)===normalize(value))||'';
@@ -69,6 +70,14 @@ export function parseSheetText(text,{filename='',format='txt'}={}){
     const issues=validateAttributes({race,level:1,attributes});if(issues.length)warnings.push(...issues);
   }
   return {filename,format,data,detected,warnings,extractedChars:input.length};
+}
+export function parseSheetPdf(text,{filename='',fields={}}={}){
+  const official=extractTenebriaForm(fields);
+  if(!official)return parseSheetText(text,{filename,format:'pdf'});
+  const warnings=[...official.warnings];
+  if(official.data.level===1&&ATTRIBUTE_KEYS.every(k=>official.data.attributes[k]!==null))
+    warnings.push(...validateAttributes({race:official.data.race,level:1,attributes:official.data.attributes,qualities:official.data.qualities}));
+  return {filename,format:'pdf',...official,warnings,extractedChars:String(text||'').length};
 }
 export function parseSheetJson(text,{filename=''}={}){
   const raw=JSON.parse(text);const o=raw?.sheet||raw?.character||raw?.personagem||raw;

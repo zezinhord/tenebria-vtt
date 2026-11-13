@@ -42,6 +42,8 @@ function sheetImportReview(){
     <p class="mini">Arquivo: <strong>${E(draft.filename)}</strong> · ${E(draft.format.toUpperCase())}. ${draft.detected.length} campos principais identificados. Campos vazios não são inventados.</p>
     ${(draft.warnings||[]).length?`<div class="notice"><strong>Verificar:</strong><ul>${draft.warnings.slice(0,12).map(w=>`<li>${E(w)}</li>`).join('')}</ul></div>`:''}
     ${(app.sheetImportErrors||[]).length?`<div class="notice"><strong>Corrigir antes de criar:</strong><ul>${app.sheetImportErrors.map(w=>`<li class="warn">${E(w)}</li>`).join('')}</ul></div>`:''}
+    ${draft.template?`<div class="notice">✓ Formulário preenchível de Tenebria reconhecido. Campos associados por seus identificadores internos.</div>`:''}
+    ${['skills','qualities','flaws','abilities','weapons','equipment'].some(k=>d[k])?`<details class="import-preview"><summary>Ver perícias, qualidades, habilidades, armas e itens reconhecidos</summary>${Object.entries({skills:"Perícias",qualities:"Qualidades",flaws:"Defeitos",abilities:"Habilidades",weapons:"Armas e armaduras",equipment:"Inventário"}).filter(([k])=>d[k]).map(([k,label])=>`<h4>${label}</h4><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${E(d[k])}</pre>`).join('')}</details>`:''}
     <form id="sheet-import-review" novalidate>
     ${input('name','Nome',d.name)}
     <div class="grid2">${picker('race','Raça',RACE_NAMES,d.race)}${picker('cls','Classe',CLASS_NAMES,d.cls)}</div>
@@ -49,7 +51,7 @@ function sheetImportReview(){
     <h4>Atributos-base</h4><div class="grid4">${ATTRIBUTE_KEYS.map(k=>input(k,ATTRIBUTE_LABELS[k],a[k],'number')).join('')}</div>
     <div class="grid2">${input('hp','PV atuais',d.hp,'number')}${input('maxHp','PV máximos',d.maxHp,'number')}</div>
     <label class="import-check"><input name="createToken" type="checkbox" checked> Criar token no mapa atual e vincular à ficha</label>
-    <p class="mini">A ficha só será criada após a confirmação. Atributos de nível 1 devem somar oito pontos. O PDF original, quando importado, será anexado à ficha no dispositivo do Mestre.</p>
+    <p class="mini">A ficha só será criada após a confirmação. Atributos de nível 1 devem somar oito pontos; a qualidade Meio-Antigo (+1) é considerada quando estiver registrada no PDF. O PDF original, quando importado, será anexado à ficha no dispositivo do Mestre.</p>
     <div class="button-row">${b('confirm-import-sheet','✓ Criar personagem','primary')}${b('cancel-import-sheet','Cancelar')}</div>
     </form></section>`;
 }
@@ -75,7 +77,7 @@ function sheetPanel(){const c=app.campaign,master=app.role==='master',sheets=mas
   ${(s.classPowers||[]).map((pow,i)=>`<div class="power-line"><label>Nome<input data-power-field="name" data-power-index="${i}" value="${E(pow.name||'')}"${disabled()} placeholder="Habilidade conforme o livro"></label><div class="grid2"><label>Níveis<input data-power-field="levels" data-power-index="${i}" type="number" min="1" max="30" value="${E(pow.levels??1)}"${disabled()}></label><label>Custo por nível<input data-power-field="costPerLevel" data-power-index="${i}" type="number" min="1" max="15" value="${E(pow.costPerLevel??1)}"${disabled()}></label></div>${master?`<div class="button-row"><button data-action="remove-class-power" data-power-index="${i}" class="danger">Remover habilidade</button></div>`:''}</div>`).join('')||'<p class="mini">Nenhuma habilidade comprada registrada.</p>'}
   <hr class="rule"><h4>Ficha em PDF</h4><p class="mini">${E(s.pdfName||'Nenhum PDF anexado. Este PDF foi anexado apenas como referência. Para criar um novo personagem lendo os dados, use Importar ficha.')}</p><div class="button-row">${master?b('attach-pdf','↑ Anexar PDF'):''}${s.pdfKey?b('view-pdf','Abrir PDF'):''}</div>
   ${input('skills','Perícias',true)}${input('qualities','Qualidades (uma por linha)',true)}${input('flaws','Defeitos',true)}${input('equipment','Equipamentos e inventário',true)}${input('weapons','Armas e armaduras',true)}${input('abilities','Habilidades',true)}${input('spells','Magias',true)}${input('history','Histórico',true)}${input('notes','Notas de jogador',true)}
-  ${master?b('delete-sheet','Excluir ficha','danger'):''}<p class="mini">Versão 0.2.0: 27 raças, 27 classes, orçamento de qualidades e cinco pontos iniciais de habilidades. PV e habilidades específicas continuam sob controle do Mestre até serem verificados no livro.</p>`:
+  ${master?b('delete-sheet','Excluir ficha','danger'):''}<p class="mini">Versão 0.2.2: 27 raças, 27 classes, orçamento de qualidades e cinco pontos iniciais de habilidades. PV e habilidades específicas continuam sob controle do Mestre até serem verificados no livro.</p>`:
     `<p class="notice">Sem fichas disponíveis. ${master?'Crie uma ficha para começar.':'Peça ao Mestre para associar um personagem ao seu código.'}</p>`}`;}
 function dicePanel(){const c=app.campaign;return `<h3>Rolagem de dados</h3><label>Fórmula<input id="dice-formula" autocomplete="off" value="${E(app.rollInput||'1D20')}" placeholder="2D6+3"></label>
     <div class="button-row">${[4,6,8,10,12,20].map(n=>b(`die-${n}`,`D${n}`)).join('')}</div>

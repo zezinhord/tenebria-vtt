@@ -124,3 +124,12 @@ O livro completo **TENEBRIA REVISADO 3.0** não é distribuído no projeto.
 - `Dockerfile`: prepara dependências na construção do container
 
 O GitHub Pages hospeda apenas a interface; sala online continua exigindo backend HTTPS separado.
+
+
+## Importação de ficha preenchível de Tenebria — 0.2.2
+
+O VTT reconhece diretamente campos AcroForm do modelo oficial de duas páginas, inclusive nome, raça, classe, nível, atributos, pontos de vida, perícias marcadas, qualidades, defeitos, habilidades, armas e inventário. Os códigos internos `text_*` e `checkbox_*` são traduzidos pelo importador. PDFs comuns ainda usam o extrator anterior; PDFs digitalizados sem campos e sem texto precisam de OCR, ainda não implementado. O arquivo original permanece local no dispositivo do Mestre.
+
+A qualidade escrita como **Meio-Antigo +1 ponto de atributo** permite validar 9 pontos no nível 1; sem esse registro o limite continua 8. Valores defensivos não explícitos, requisitos especiais e custos de classe devem ser conferidos com o livro antes de automatizar. Use **Fichas → Importar ficha** e expanda a prévia para revisar os itens antes de criar o personagem e token. Não é necessário importar novamente personagens existentes.
+
+A ficha pessoal utilizada para verificar a correção não foi adicionada ao repositório público.

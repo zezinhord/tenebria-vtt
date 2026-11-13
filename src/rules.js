@@ -7,12 +7,17 @@ export function derived(a){ return {
   will:(+a.mental||0)+(+a.skill||0), resistance:(+a.mental||0)+(+a.physical||0),
   defense:(+a.vigor||0)
 }; }
+export function creationAttributeBudget(sheet){
+  const bonus=/meio[\s-]*antigo[^\n]*\+\s*1\s*ponto\s*de\s*atributo/i.test(String(sheet.qualities||''));
+  return 8+(bonus?1:0);
+}
 export function validateAttributes(sheet){
   const errors=[]; const race=RACES[sheet.race]; const a=sheet.attributes||{};
   for(const k of ATTRIBUTE_KEYS){const n=Number(a[k]); if(!Number.isInteger(n)||n<1)errors.push(`${ATTRIBUTE_LABELS[k]} deve ser inteiro e maior que zero.`);
     if(race && n>race[k])errors.push(`${ATTRIBUTE_LABELS[k]} ultrapassa o limite ${race[k]} da raça ${sheet.race}.`); }
   const total=ATTRIBUTE_KEYS.reduce((s,k)=>s+(Number(a[k])||0),0);
-  if(sheet.level===1 && total!==8) errors.push(`No nível 1, a soma dos atributos-base deve ser 8 (atual: ${total}).`);
+  const budget=creationAttributeBudget(sheet);
+  if(sheet.level===1 && total!==budget) errors.push(`No nível 1, a soma dos atributos-base deve ser ${budget} (atual: ${total}).`);
   return errors;
 }
 // A vida total depende da classe; não calculamos PV sem dados específicos da classe.

@@ -28,7 +28,7 @@ export async function extractPdfText(file,{maxPages=8}={}){
     }
     const text=extracted.join('\n');
     if(text.replace(/[^\p{L}\p{N}]/gu,'').length<20)throw Error('Este PDF parece ser uma imagem digitalizada ou não contém texto selecionável. OCR ainda não está disponível; anexe um PDF com texto ou importe TXT/JSON.');
-    return {text,pagesRead:count,pagesTotal:pdf.numPages,truncated:pdf.numPages>count};
+    return {text,fields:fields||{},pagesRead:count,pagesTotal:pdf.numPages,truncated:pdf.numPages>count};
   }catch(e){if(/PDF|OCR|Leitor/.test(e.message))throw e;throw Error('Não foi possível interpretar o PDF: '+e.message);}
   finally{try{await pdf?.destroy();}catch{}}
 }
