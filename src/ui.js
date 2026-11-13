@@ -17,7 +17,7 @@ function mapsPanel(){const c=app.campaign,s=scene(),master=app.role==='master';r
   <div class="button-row">${b('fit','⊡ Enquadrar')}${b('zoom-in','＋ Zoom')}${b('zoom-out','－ Zoom')}</div>
   ${master?`<hr class="rule"><h4>Grade</h4><div class="grid2"><label>Tamanho (pixels)<input type="number" min="20" max="250" data-scene-field="grid.size" value="${s.grid.size}"></label><label>Grade visível<select data-scene-field="grid.enabled"><option value="true"${sel(s.grid.enabled,true)}>Sim</option><option value="false"${sel(s.grid.enabled,false)}>Não</option></select></label></div>
     <label><input type="checkbox" data-settings-field="snap"${checked(c.settings.snap)}> Encaixar tokens no centro das casas</label><label><input type="checkbox" data-settings-field="animations"${checked(c.settings.animations!==false)}> Animações leves</label>
-    <div class="button-row">${b('center-tokens','⊞ Centralizar tokens nas casas')}</div><p class="mini">O encaixe move cada token de casa em casa, sempre pelo centro. Use o botão acima para corrigir tokens de campanhas anteriores.</p><hr class="rule"><h4>Ferramentas</h4><div class="button-row">${['select','add-token','fog-add','fog-reveal'].map((tool,i)=>`<button class="${app.tool===tool?'selected-tool':''}" data-action="tool" data-value="${tool}">${['↖ Selecionar','+ Token','▓ Ocultar','✧ Revelar'][i]}</button>`).join('')}</div>
+    <div class="button-row">${b('center-tokens','⊞ Centralizar tokens nas casas')}</div><p class="mini">O encaixe move cada token de casa em casa, sempre pelo centro. Use o botão acima para corrigir tokens de campanhas anteriores.</p><hr class="rule"><h4>Ferramentas</h4><div class="button-row">${['select','add-token','fog-add','fog-reveal','measure','marker'].map((tool,i)=>`<button class="${app.tool===tool?'selected-tool':''}" data-action="tool" data-value="${tool}">${['↖ Selecionar','+ Token','▓ Ocultar','✧ Revelar','⌁ Medir','⌖ Marcador'][i]}</button>`).join('')}</div>
     <div class="button-row">${b('show-fog',app.showFog?'Ver sem névoa':'Ver com névoa')}${b('clear-fog','Revelar tudo')}</div><p class="mini">Para desenhar ou revelar névoa, escolha a ferramenta e arraste no mapa. A prévia sem névoa é exclusiva do Mestre.</p>`:
     `<p class="notice">Arraste os seus personagens para movimentá-los. Faça pinça para aproximar o mapa.</p>`}
     <hr class="rule"><p class="mini">Cena: ${s.width} × ${s.height} px · ${s.tokens.length} tokens · ${s.fog?.length||0} áreas de névoa.</p>`;}
@@ -64,26 +64,37 @@ function combatPanel(){const c=app.campaign,com=c.combat,master=app.role==='mast
       ${master?`<input aria-label="Iniciativa" title="Iniciativa" data-combat-field="initiative" data-id="${E(x.id)}" type="number" class="initiative-field" value="${x.initiative||0}">`:`<span class="pill">${x.initiative||0}</span>`}</div>
       ${master?`<div class="button-row">${b('combat-hp-down','−1 PV') .replace('data-action','data-id="'+E(x.id)+'" data-action')}${b('combat-hp-up','+1 PV').replace('data-action','data-id="'+E(x.id)+'" data-action')}${b('combat-remove','Remover','danger').replace('data-action','data-id="'+E(x.id)+'" data-action')}</div>`:''}</div>`).join('')||'<p class="muted">Nenhum participante. Adicione tokens à iniciativa.</p>'}
     ${master?`<hr class="rule"><h4>Condição do combatente ativo</h4><input placeholder="Ex.: envenenado, imobilizado" data-combat-field="conditions" data-id="${E(com.entries[com.index]?.id||'')}" value="${E((com.entries[com.index]?.conditions||[]).join(', '))}"><p class="mini">O Mestre pode ajustar iniciativas, vida e turnos. A ferramenta não resolve automaticamente as ações de combate.</p>`:''}`;}
-function audioPanel(){const c=app.campaign;return `<h3>Biblioteca sonora</h3><p class="mini">Reprodução local do Mestre. Áudios importados são armazenados no dispositivo.</p>
-    ${app.role==='master'?`<div class="button-row">${b('import-audio','↑ Importar áudio','primary')}${b('stop-audio','■ Parar todos')}</div>
-    <label>Volume<input id="audio-volume" type="range" min="0" max="1" step="0.05" value="${app.volume}"></label><label><input id="audio-loop" type="checkbox"${checked(app.loop)}> Repetir em loop</label>`:''}
-    ${c.audioFiles?.map(s=>`<div class="item"><div class="details"><strong>${E(s.name)}</strong><small>${E(s.category)} ${s.key?'· arquivo local':'· incluído'}</small></div>${app.role==='master'?`<button data-action="play-audio" data-id="${E(s.id)}">▶</button>`:''}</div>`).join('')||''}
-    <p class="notice">Por padrão, o áudio toca somente no dispositivo que acionou a reprodução. Transmissão sincronizada entre aparelhos não faz parte desta versão.</p>`;}
-function sessionPanel(){const c=app.campaign,connection=c.connection,root=location.origin+location.pathname;
-  if(app.role==='projector')return '<p>Exibindo tabuleiro público.</p>';
-  const link=app.roomInput?`${root}?room=${encodeURIComponent(app.roomInput)}&role=projector`:'';
-  return `<h3>Sessão e projeção</h3><p class="notice">Para conectar outros aparelhos, todos precisam abrir a mesma instalação do servidor. No modo remoto, hospede o servidor em um endereço HTTPS.</p>
-    ${app.role==='master'?`<div class="button-row">${b('create-online','Criar sala online','primary')}${connection?b('reconnect-master','Reconectar Mestre'):''}</div>`:''}
+function audioPanel(){const c=app.campaign;const target=app.audioTarget||'local';return `<h3>Biblioteca sonora</h3><p class="mini">Sons locais e reprodução de efeitos incluídos nos aparelhos conectados.</p>
+  ${app.role==='master'?`<div class="button-row">${b('import-audio','↑ Importar áudio','primary')}${b('stop-audio','■ Interromper')}</div>
+  <label>Saída do áudio<select id="audio-target">${[['local','Este aparelho'],['projector','Som no projetor'],['players','Som nos jogadores'],['all','Todos os aparelhos']].map(([v,label])=>`<option value="${v}"${sel(target,v)}>${label}</option>`).join('')}</select></label>
+  <label>Volume<input id="audio-volume" type="range" min="0" max="1" step="0.05" value="${app.volume}"></label><label><input id="audio-loop" type="checkbox"${checked(app.loop)}> Repetir em loop</label>`:''}
+  ${c.audioFiles?.map(audio=>`<div class="item"><div class="details"><strong>${E(audio.name)}</strong><small>${E(audio.category)} ${audio.key?'· disponível só neste aparelho':'· som incluído / compartilhável'}</small></div>${app.role==='master'?`<button data-action="play-audio" data-id="${E(audio.id)}">▶</button>`:''}</div>`).join('')||''}
+  <p class="notice">Cada aparelho remoto precisa tocar em "Ativar áudio" uma vez. Arquivos importados são locais: o servidor sincroniza somente os efeitos incluídos na aplicação nesta versão.</p>`;}
+function sessionPanel(){const c=app.campaign,connection=c.connection,master=app.role==='master',projector=app.role==='projector';
+  if(projector)return '<p>Exibindo apenas o tabuleiro público.</p>';
+  const mode=app.mode==='online'?'online':'presencial';
+  const projectorLink=connection?.projectorCode?app.invite('projector',connection.projectorCode):'';
+  return `<h3>${mode==='online'?'Mesa Online':'Mesa Presencial'}</h3>
+    <div class="button-row">${b('mode-presencial','⌂ Presencial',mode==='presencial'?'primary':'')}${b('mode-online','◎ Online',mode==='online'?'primary':'')}${b('go-home','⌂ Início')}</div>
+    <p class="notice">${mode==='online'?'Os participantes entram remotamente. É necessário configurar um servidor Tenebria em HTTPS. O GitHub Pages hospeda apenas a interface.':'Para projetar sem internet pública, abra o Tenebria VTT pelo endereço IP do servidor local nos dois dispositivos, conectados ao mesmo Wi-Fi ou hotspot. O celular controla e o projetor apenas exibe.'}</p>
+    <label>Endereço do servidor (opcional na rede local)<input id="server-url" type="url" placeholder="https://seu-servidor.example.com" value="${E(app.serverAddress)}" autocomplete="url"></label>
+    <div class="button-row">${b('save-server','Salvar e testar servidor')}${b('clear-server','Usar servidor desta página')}</div>
+    <p class="mini">Na rede local, deixe o campo vazio e abra o endereço HTTP do servidor Node.js (ex.: http://192.168.1.10:4173) em todos os aparelhos. No GitHub Pages, o servidor remoto precisa de HTTPS e permitir esta origem.</p>
+    ${master?`<div class="button-row">${b('create-online',`+ Criar sala ${mode==='online'?'online':'presencial'}`,'primary')}${connection?b('reconnect-master','Reconectar Mestre'):''}</div>`:''}
     <label>Código da sala<input id="room-input" value="${E(app.roomInput)}" placeholder="XXXXXXXX"></label>
-    ${app.role!=='master'?`<label>Código de convite do jogador<input id="player-code" value="${E(app.playerCode)}" placeholder="Código individual"></label><div class="button-row">${b('connect-player','Entrar como jogador','primary')}${b('connect-projector','Entrar como projetor')}</div>`:
-      `<div class="button-row">${b('connect-player','Testar como jogador')}${b('connect-projector','Abrir modo projetor')}</div>`}
-    ${app.role==='master'&&connection?`<hr class="rule"><h4>Convites da sala</h4><div class="secret"><strong>Senha administrativa (não compartilhar)</strong><div class="mini">${E(connection.masterCode)}</div></div>
-    <label>Código público da sala<input readonly value="${E(connection.roomId)}"></label>
-    ${Object.entries(connection.playerCodes||{}).map(([slot,code])=>`<div class="item"><div class="details"><strong>${E(c.slotNames?.[slot]||slot)}</strong><small>${E(code)}</small></div><button data-action="copy-player-code" data-code="${E(code)}">Copiar</button></div>`).join('')}`:''}
-    ${link?`<hr class="rule"><h4>Link para projetor</h4><input readonly value="${E(link)}"><div class="button-row">${b('copy-projector','Copiar link')}${b('open-projector','Abrir projeção')}</div>`:''}
-    ${app.role==='master'?`<hr class="rule"><div class="button-row">${b('local-projector','Prévia em tela cheia')}${b('disconnect','Desconectar')}</div>`:''}
-    <h4>Permissões</h4><p class="mini">O Mestre tem controle total. Jogadores precisam do convite individual e movimentam apenas seus tokens autorizados. O projetor recebe somente cenas públicas e fichas não são distribuídas a ele.</p>`;}
+    ${!master?`<label>Código de convite<input id="player-code" value="${E(app.playerCode)}" placeholder="Código recebido do Mestre"></label>
+      <div class="button-row">${b('connect-player','Entrar como jogador','primary')}${b('connect-projector','Entrar como projetor')}</div>`:
+      `<div class="button-row">${b('connect-player','Abrir convite de jogador')}${b('connect-projector','Abrir projeção')}</div>`}
+    ${master&&connection?`<hr class="rule"><h4>Convites da sala</h4><div class="secret"><strong>Credencial administrativa — não compartilhar</strong><div class="mini">${E(connection.masterCode)}</div></div>
+      <label>Identificador da sala<input readonly value="${E(connection.roomId)}"></label>
+      <h4>Jogadores</h4>${Object.entries(connection.playerCodes||{}).map(([slot,code])=>`<div class="item"><div class="details"><strong>${E(c.slotNames?.[slot]||slot)}</strong><small>Código ${E(code)}</small></div><button data-action="copy-player-link" data-slot="${E(slot)}">Copiar convite</button></div>`).join('')}`:''}
+    ${projectorLink?`<hr class="rule"><h4>Tela do projetor (somente leitura)</h4><label>Convite protegido<input readonly value="${E(projectorLink)}"></label><div class="button-row">${b('copy-projector','Copiar link')}${b('open-projector','Abrir projeção')}</div>`:''}
+    ${master&&app.online?`<hr class="rule"><div class="button-row">${b('close-room','Encerrar sala','danger')}${b('reopen-room','Reabrir sala')}${b('disconnect','Sair da sessão')}</div>`:''}
+    <p class="mini">A campanha é a mesma nas duas modalidades. Os códigos de Mestre, jogadores e projetor são diferentes. A projeção nunca recebe as fichas privadas ou as anotações secretas.</p>`;
+}
 export function renderUI(a){app=a;document.getElementById('campaign-title').textContent=a.campaign?.name||'Tenebria';
+  const home=document.getElementById('mode-home');if(home){home.hidden=!a.homeOpen;home.classList.toggle('is-open',!!a.homeOpen);}
+  const modeLabel=document.getElementById('mode-label');if(modeLabel)modeLabel.textContent=a.mode==='online'?'● Online':'● Presencial';
   if(a.role==='projector'){document.body.classList.add('projector');return;}document.body.classList.remove('projector');
   const allowed=a.role==='master'?nav:nav.filter(([id])=>['maps','tokens','sheets','dice','combat','session'].includes(id));
   document.getElementById('tabs').innerHTML=allowed.map(([id,icon,label])=>`<button data-action="tab" data-value="${id}" class="${a.selectedTab===id?'active':''}"><b>${icon}</b>${label}</button>`).join('');
@@ -94,6 +105,12 @@ export function renderUI(a){app=a;document.getElementById('campaign-title').text
 export function initUI(a){app=a;
   document.addEventListener('click',async e=>{
     const el=e.target.closest('[data-action]');if(!el)return;const act=el.dataset.action,id=el.dataset.id,master=app.role==='master',c=app.campaign,s=scene();
+    if(act==='choose-mode'){app.chooseMode(el.dataset.mode);return;}
+    if(act==='go-home'){app.showHome();return;}
+    if(act==='mode-presencial'||act==='mode-online'){app.mode=act==='mode-online'?'online':'presencial';app.render();return;}
+    if(act==='save-server'){await app.configureServer(document.getElementById('server-url')?.value||'');return;}
+    if(act==='clear-server'){try{app.configureServer('');app.toast('Endereço removido. O servidor desta página será usado.');}catch(e){app.toast(e.message);}return;}
+    if(act==='unlock-audio'){await app.unlockAudio();return;}
     if(act==='toggle-menu'||act==='close-sidebar'){app.panelOpen=act==='close-sidebar'?false:!app.panelOpen;app.render();return;}
     if(act==='fullscreen'){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch(err){app.toast('Tela cheia indisponível neste navegador.');}return;}
     if(act==='fit'){fitScene();return;}
@@ -138,17 +155,26 @@ export function initUI(a){app=a;
     if(act==='combat-sort'&&master){const active=c.combat.entries[c.combat.index]?.id;c.combat.entries.sort((a,b)=>b.initiative-a.initiative);c.combat.index=Math.max(0,c.combat.entries.findIndex(x=>x.id===active));app.changed('Iniciativa ordenada');app.render();return;}
     if((act==='combat-hp-down'||act==='combat-hp-up')&&master){const entry=c.combat.entries.find(x=>x.id===id);if(entry){entry.hp+=act==='combat-hp-down'?-1:1;for(const sc of c.scenes){const tok=sc.tokens.find(t=>t.id===entry.tokenId);if(tok){tok.hp=entry.hp;const sh=c.sheets.find(sh=>sh.id===tok.sheetId);if(sh)sh.hp=entry.hp;}}app.changed('Vida ajustada');app.render();}return;}
     if(act==='import-audio'&&master){document.getElementById('file-audio').click();return;}
-    if(act==='play-audio'&&master){await app.playSound(id);return;}
-    if(act==='stop-audio'&&master){app.stopSound();return;}
+    if(act==='play-audio'&&master){await app.routeAudio(id);return;}
+    if(act==='stop-audio'&&master){await app.routeStop();return;}
     if(act==='create-online'&&master){await app.makeOnline();return;}
-    if(act==='reconnect-master'&&master){const conn=c.connection;if(conn)await app.connect('master',conn.roomId,conn.masterCode);return;}
-    if(act==='connect-player'){const room=document.getElementById('room-input')?.value||app.roomInput,code=document.getElementById('player-code')?.value||'';if(master){if(!room){app.toast('Crie ou informe uma sala primeiro.');return;}window.open(`${location.origin+location.pathname}?room=${encodeURIComponent(room)}&role=player`,'_blank','noopener');return;}app.playerCode=code;await app.connect('player',room,code);return;}
-    if(act==='connect-projector'){const room=document.getElementById('room-input')?.value||app.roomInput;if(master){if(!room){app.toast('Crie ou informe uma sala primeiro.');return;}window.open(`${location.origin+location.pathname}?room=${encodeURIComponent(room)}&role=projector`,'_blank','noopener');return;}await app.connect('projector',room,'');return;}
-    if(act==='copy-projector'){const base=location.origin+location.pathname;await navigator.clipboard.writeText(`${base}?room=${encodeURIComponent(app.roomInput)}&role=projector`);app.toast('Link copiado');return;}
-    if(act==='copy-player-code'){await navigator.clipboard.writeText(el.dataset.code);app.toast('Código copiado');return;}
-    if(act==='open-projector'){const base=location.origin+location.pathname;window.open(`${base}?room=${encodeURIComponent(app.roomInput)}&role=projector`,'_blank','noopener');return;}
-    if(act==='local-projector'&&master){document.body.classList.add('projector');app.role='projector';app.toast('Prévia do projetor. Pressione Esc para retornar.');fitScene();return;}
-    if(act==='disconnect'){app.online?.close?.();app.online=null;document.getElementById('net-status').textContent='● Local';app.toast('Sessão desconectada');return;}
+    if(act==='reconnect-master'&&master){const conn=c.connection;if(conn){app.mode=conn.mode||app.mode;await app.connect('master',conn.roomId,conn.masterCode);}return;}
+    if(act==='connect-player'){
+      const room=document.getElementById('room-input')?.value||app.roomInput,code=document.getElementById('player-code')?.value||app.playerCode;
+      if(master){if(!c.connection){app.toast('Crie uma sala primeiro.');return;}window.open(app.invite('player',Object.values(c.connection.playerCodes||{})[0]),'_blank','noopener');return;}
+      app.playerCode=code;await app.connect('player',room,code);return;
+    }
+    if(act==='connect-projector'){
+      const room=document.getElementById('room-input')?.value||app.roomInput,code=document.getElementById('player-code')?.value||app.playerCode;
+      if(master){if(!c.connection){app.toast('Crie uma sala primeiro.');return;}window.open(app.invite('projector',c.connection.projectorCode),'_blank','noopener');return;}
+      await app.connect('projector',room,code);return;
+    }
+    if(act==='copy-projector'&&master&&c.connection?.projectorCode){try{await navigator.clipboard.writeText(app.invite('projector',c.connection.projectorCode));app.toast('Link do projetor copiado.');}catch{app.toast('Copie o link exibido na caixa.');}return;}
+    if(act==='copy-player-link'&&master){const code=c.connection?.playerCodes?.[el.dataset.slot];if(!code)return;try{await navigator.clipboard.writeText(app.invite('player',code));app.toast('Convite do jogador copiado.');}catch{app.toast('Permissão para copiar indisponível.');}return;}
+    if(act==='open-projector'&&master&&c.connection?.projectorCode){window.open(app.invite('projector',c.connection.projectorCode),'_blank','noopener');return;}
+    if(act==='close-room'&&master){await app.setRoomClosed(true);return;}
+    if(act==='reopen-room'&&master){await app.setRoomClosed(false);return;}
+    if(act==='disconnect'){await app.leaveRoom();return;}
   });
   document.addEventListener('change',async e=>{const el=e.target,c=app.campaign,s=scene(),master=app.role==='master';
     if(el.id==='file-map'){if(el.files?.[0])await app.importMap(el.files[0]);el.value='';return;}
@@ -156,6 +182,7 @@ export function initUI(a){app=a;
     if(el.id==='file-audio'){if(el.files?.[0])await app.importAudio(el.files[0]);el.value='';return;}
     if(el.id==='file-pdf'){if(el.files?.[0])await app.importSheetPdf(el.files[0]);el.value='';return;}
     if(el.id==='file-campaign'){if(el.files?.[0])await app.import(el.files[0]);el.value='';return;}
+    if(el.id==='audio-target'){app.audioTarget=el.value;return;}
     if(el.id==='audio-volume'){app.volume=Number(el.value);for(const a of app.activeSound)a.audio.volume=app.volume;return;}
     if(el.id==='audio-loop'){app.loop=el.checked;for(const a of app.activeSound)a.audio.loop=app.loop;return;}
     if(el.id==='dice-formula'){app.rollInput=el.value;return;}
@@ -167,7 +194,7 @@ export function initUI(a){app=a;
     if(el.dataset.campaignField&&master){c[el.dataset.campaignField]=val;app.changed('Campanha salva');app.render();return;}
     if(el.dataset.sceneField&&master){const field=el.dataset.sceneField;if(field==='name')s.name=val;else if(field==='grid.size')s.grid.size=Math.max(20,Math.min(250,Number(val)||60));else if(field==='grid.enabled')s.grid.enabled=val==='true';app.changed();app.render();return;}
     if(el.dataset.settingsField&&master){c.settings[el.dataset.settingsField]=val;app.changed();app.render();return;}
-    if(el.dataset.tokenField&&master){const t=s.tokens.find(t=>t.id===app.selectedTokenId);if(!t)return;const f=el.dataset.tokenField;if(['hp','maxHp','size','rotation'].includes(f))t[f]=Number(val);else if(f==='conditions')t[f]=String(val).split(',').map(x=>x.trim()).filter(Boolean);else t[f]=val;t.ownerId=t.ownerId||null;if(['hp','maxHp','conditions'].includes(f)){const combat=c.combat.entries.find(x=>x.tokenId===t.id);if(combat)combat[f]=t[f];const sh=c.sheets.find(x=>x.id===t.sheetId);if(sh&&f!=='conditions')sh[f]=t[f];}app.changed();app.render();return;}
+    if(el.dataset.tokenField&&master){const t=s.tokens.find(t=>t.id===app.selectedTokenId);if(!t)return;const f=el.dataset.tokenField;if(['hp','maxHp','size','rotation'].includes(f))t[f]=Number(val);else if(f==='conditions')t[f]=String(val).split(',').map(x=>x.trim()).filter(Boolean);else if(['visible','locked'].includes(f))t[f]=!!val;else t[f]=val;t.ownerId=t.ownerId||null;if(['hp','maxHp','conditions'].includes(f)){const combat=c.combat.entries.find(x=>x.tokenId===t.id);if(combat)combat[f]=t[f];const sh=c.sheets.find(x=>x.id===t.sheetId);if(sh&&f!=='conditions')sh[f]=t[f];}app.changed();app.render();return;}
     const sheet=c.sheets.find(s=>s.id===app.selectedSheetId);
     if(el.dataset.attribute&&master&&sheet){sheet.attributes[el.dataset.attribute]=Number(val);app.changed();app.render();return;}
     if(el.dataset.sheetField&&sheet){const f=el.dataset.sheetField;

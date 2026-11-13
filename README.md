@@ -1,97 +1,88 @@
-# TENEBRIA VTT 0.1.2 — PWA de mesa virtual
+# TENEBRIA VTT 0.1.3 — Mesa Presencial e Mesa Online
 
-Aplicação real de mesa virtual **2D**, sem dependências de npm, para RPG **Tenebria Revisado 3.0**. Construída como PWA em JavaScript, Canvas 2D, IndexedDB e Node.js HTTP + Server-Sent Events (SSE). **Não é um APK**: roda no navegador e pode ser instalada como PWA onde o navegador permitir.
+Mesa virtual dark fantasy para **Tenebria Revisado 3.0**. Uma única PWA para celulares Android, computadores e navegadores compatíveis de televisores/projetores. O mesmo núcleo guarda campanhas, mapas, fichas, tokens, dados, combate, sons e permissões. Desenvolvido sobre a base **0.1.2**, sem reiniciar o projeto.
 
-## Correção da movimentação na 0.1.2
+## Novidades da 0.1.3
 
-- O token agora ocupa o **centro da casa** (não a interseção das linhas); no modo de encaixe, avança em passos de uma casa ao ser arrastado.
-- No painel **Mapas → Grade**, o Mestre pode usar **Centralizar tokens nas casas** para reposicionar tokens que já estavam salvos em versões anteriores.
-- O servidor também valida o centro da casa ao receber a movimentação dos jogadores.
+- **Menu inicial com duas modalidades:** Mesa Presencial e Mesa Online, acessando as mesmas campanhas salvas. O botão ⌂ permite voltar ao seletor.
+- **Mesa Presencial de duas telas:** o Mestre controla a campanha no celular e outro navegador acessa o modo Projetor, com credencial própria, exibindo o tabuleiro em tela cheia, sem menu administrativo. Funciona sem internet pública quando ambos acessam um **servidor Node.js funcionando na mesma rede Wi-Fi/hotspot**.
+- **Mesa Online:** salas e convites individuais de jogadores, controle de permissões no servidor, retomada da sessão no navegador após recarregar, encerramento e reabertura pelo Mestre. Requer servidor acessível por **HTTPS**, além do GitHub Pages.
+- **Convites com credenciais diferentes** para Mestre, projetor e cada jogador. O código de acesso vai no fragmento `#` do link, que não é enviado no pedido HTTP para carregar a página. Não compartilhe a credencial do Mestre.
+- **Sincronização incremental dos tokens** enquanto são arrastados (até ~8 atualizações por segundo), sem retransmitir a imagem completa do mapa a cada movimento. Encaixe dos tokens continua no **centro** de cada célula, como na 0.1.2.
+- **Áudio por destino:** reproduzir efeitos originais incluídos no celular do Mestre, projetor, jogadores ou todos. O servidor envia somente comandos, e o arquivo de áudio é carregado por cada aparelho. É necessário o usuário tocar em **Ativar áudio** no navegador receptor antes da reprodução automática. Sons importados continuam locais.
+- **Ferramentas adicionais:** medição de distância em casas e criação de marcadores públicos no tabuleiro.
+- Melhorias de segurança: projetor exige código, jogadores não movimentam tokens alheios, segredos permanecem filtrados pelo servidor, SSE reconecta e salas podem ser encerradas/retomadas.
 
-## O que funciona na 0.1.2
+## Abrir o aplicativo
 
-- Campanhas locais, nova campanha, demo, seleção, edição, salvamento automático por IndexedDB, importação/exportação `.json` (áudios e PDFs anexados incluídos quando disponíveis).
-- Dois mapas demonstrativos editáveis (masmorra **Cripta sob a Vigília** e povoado **Corval**); importação de PNG/JPEG/WebP convertidos localmente para WebP até 1800 × 1300; zoom por pinça, roda, arrasto, centralização, grade quadrada configurável e encaixe dos tokens no centro de cada quadrado (com botão para alinhar tokens antigos).
-- Tokens nomeados com tamanho, rotação, vida, proprietário, bloqueio, ocultação, imagem customizada e associação a fichas; movimentação por arrastar. Névoa manual: ocultar/revelar áreas retangulares e revelar tudo.
-- Fichas editáveis: Físico, Habilidade, Vigor, Mental, subatributos calculados; raças **Humano, Anão, Elfo, Gnomo e Zetharin**, validadas por limites do livro; habilidades, inventário, qualidades e campos livres; PDFs anexos consultáveis, sem OCR/conversão automática.
-- Rolagens D4, D6, D8, D10, D12, D20, múltiplos dados e modificadores (`2D6+3`), histórico; privadas do Mestre, públicas compartilhadas e teste rápido de atributos. RNG `crypto.getRandomValues` no navegador; rolagem dos jogadores é refeita no servidor para não aceitar valores inventados.
-- Iniciativa, ordenação, troca de turnos, rodadas, ajuste de PV, condições em combate; decisão sempre controlada pelo Mestre.
-- Áudio local com volume, loop, sobreposição, importação de arquivos, três efeitos originais incluídos. Sons importados **não são sincronizados** para outros dispositivos na versão 0.1.0.
-- Servidor multiplayer independente de bibliotecas de terceiros, com salas, código administrativo e convites individuais dos jogadores. Estado atualizado por SSE sem recarregar. Jogadores só podem movimentar seus próprios tokens, editar campos de texto de sua ficha e rolar dados. Projeção recebe estado público, sem fichas privadas, anotações do Mestre e tokens dentro da névoa. Névoa é queimada numa imagem pública no navegador do Mestre antes da sincronização, para que o cliente não receba a imagem original oculta.
-- PWA instalável em origem segura HTTPS ou localhost, e cache de recursos da interface para uso individual offline.
+PWA pública: **https://zezinhord.github.io/tenebria-vtt/** — funciona como aplicação individual com campanhas locais. A partir da 0.1.3, no menu **Sessão** você também pode informar a **origem HTTPS** de um servidor Tenebria próprio para habilitar salas remotas. **O GitHub Pages não executa o backend Node.js.**
 
-## Como iniciar no computador ou hospedagem Node.js
+### 1. Presencial sem internet pública
 
-1. Extraia o ZIP preservando as pastas.
-2. Com **Node.js 20 ou superior** instalado, abra um terminal na pasta `tenebria-vtt`.
-3. Execute `npm start` (não precisa de `npm install`, pois não há dependências de npm).
-4. Abra **http://localhost:4173**. A campanha demonstrativa aparece na primeira visita.
-5. Clique em **Sessão → Criar sala online**, distribua os códigos de convite individuais e abra o link do projetor.
+**Opção A — PC ou notebook como servidor:**
 
-Para acessar de outro aparelho na mesma rede Wi‑Fi, use `http://IP-DO-SERVIDOR:4173` no navegador. Os dois aparelhos precisam alcançar a mesma instância do servidor. Para funcionamento externo pela internet, hospede **todo o projeto no mesmo servidor Node** com HTTPS (proxy reverso/TLS no provedor) e disco persistente para a pasta `.local-rooms/`. `TENEBRIA_DATA_DIR` permite alterar a pasta de persistência. O servidor escuta `0.0.0.0` e usa a variável `PORT` quando definida.
+1. Baixe o projeto, extraia o ZIP ou clone este repositório.
+2. Instale **Node.js 20 ou superior**, entre na pasta do projeto e execute `npm start`. Não é necessário instalar pacotes adicionais.
+3. Conecte celular, computador e projetor/receptor à mesma rede Wi-Fi ou hotspot. Descubra o IP local do computador.
+4. No navegador do Mestre, abra `http://IP-DO-COMPUTADOR:4173` (não o endereço GitHub Pages). Escolha **Mesa Presencial → Criar sala presencial**.
+5. Copie o **link do projetor** e abra-o no navegador do dispositivo ligado ao projetor. Esse aparelho recebe somente a visualização pública. Ative a tela cheia pelo navegador, quando suportado.
+6. Compartilhe os links/códigos dos jogadores para permitir acesso individual, caso queiram controlar os próprios tokens.
 
-## Sem computador: executar no próprio celular Android via Termux
+**Opção B — somente celular Android como servidor (Termux):** instale o Termux, execute `pkg update && pkg install nodejs`, extraia este projeto numa pasta acessível e, dentro dela, use `npm start`. O celular deve manter o Termux rodando durante toda a sessão. No próprio celular, abra `http://localhost:4173`; no projetor/receptor abra `http://IP-DO-CELULAR:4173`. O servidor escuta na interface de rede `0.0.0.0`. O hotspot deve permitir comunicação entre clientes (isolamento de AP desativado). Faça backup das campanhas. Alguns Androids podem suspender o Termux quando o aplicativo fica em segundo plano; desative sua otimização de bateria, se necessário.
 
-A solução tecnicamente mais direta para hospedar o servidor **na rede local** usando somente o Android é Termux:
+O navegador do **HY3000 não foi testado fisicamente**. Caso seja limitado, utilize um notebook, TV box, Chromecast compatível ou outro celular ligado ao projetor e abra nele o modo público. **Espelhamento** da tela do Mestre não substitui uma segunda tela pública: pode expor controles e notas privadas.
 
-1. Instale uma versão atual e confiável do **Termux** e um gerenciador que descompacte ZIP.
-2. No Termux, execute `pkg update && pkg install nodejs unzip`.
-3. Extraia a pasta do projeto em um diretório acessível pelo Termux; em seguida entre nela com `cd .../tenebria-vtt`.
-4. Execute `npm start`. Abra no próprio celular `http://localhost:4173`.
-5. Com o celular e o projetor no mesmo Wi‑Fi, obtenha o IPv4 local do celular nas configurações da conexão e, no navegador do projetor, acesse `http://IP-DO-CELULAR:4173`.
-6. Crie uma sala pelo celular e conecte o navegador do projetor como **projetor**.
+### 2. Online pela internet
 
-**Atenção:** Termux deve continuar em execução enquanto a sessão acontece. Desative a otimização de bateria para o Termux, conforme as opções do Android; algumas redes impedem comunicação entre dispositivos e alguns projetores não suportam todos os recursos do navegador. PWA instalada via HTTP no IP de outro aparelho geralmente não é permitida; use o navegador ou HTTPS.
+1. Hospede este projeto em um servidor Node.js acessível por **HTTPS**, com `npm start` ou `node server/index.mjs`. O servidor usa `PORT` e aceita `TENEBRIA_DATA_DIR` para o diretório persistente das salas. Utilize um volume persistente e backups para dados de campanhas.
+2. O backend permite CORS somente da origem oficial `https://zezinhord.github.io` e da própria origem do servidor; adicione outras origens autorizadas em `TENEBRIA_ALLOWED_ORIGINS` (lista separada por vírgulas).
+3. Abra a PWA pública, escolha **Mesa Online**, vá a **Sessão**, insira apenas a origem `https://seu-servidor.example.com` em **Endereço do servidor** e clique em **Salvar e testar servidor**.
+4. Clique em **Criar sala online**. Compartilhe os convites individuais com amigos. O link inclui a origem do backend para conectar quem recebe o convite.
+5. Os clientes recebem o estado permitido via Server-Sent Events (SSE). O Mestre continua controlando encontros, turnos e segredos. Ao recarregar a aba, o cliente tenta retomar a sessão no mesmo navegador. Se a credencial de sessão expirar, será necessário entrar novamente com o código.
 
-## GitHub Pages e publicação
+**Não há servidor de internet hospedado por este repositório neste momento**. A opção online depende da configuração real da hospedagem externa. O Dockerfile está incluído para provedores compatíveis. Para operação pública contínua, configure HTTPS, disco persistente, backup, limites de solicitações e monitoramento do servidor.
 
-Os arquivos `.github/workflows/check.yml` e `pages.yml` foram incluídos para CI e publicação estática no GitHub Pages. O código está no repositório **[zezinhord/tenebria-vtt](https://github.com/zezinhord/tenebria-vtt)**. Para publicar, ative *Settings → Pages → Build and deployment → GitHub Actions*, se necessário. Após a execução bem-sucedida do workflow de publicação, a PWA estática deverá ficar em **https://zezinhord.github.io/tenebria-vtt/**. O fluxo de teste executa `npm test`, e o de Pages publica a PWA estática. **GitHub Pages não executa `server/index.mjs`**: nessa publicação, campanhas locais funcionam, mas salas online só funcionam com a aplicação hospedada no servidor Node (não há seleção de backend remoto na 0.1.0).
+**Evite usar o endereço HTTP da rede local na configuração do GitHub Pages (HTTPS)**: navegadores bloqueiam conteúdo misto. Para sessões locais, abra a PWA servida diretamente pelo próprio Node em `http://IP:4173`.
 
-O workflow publica somente os recursos estáticos da PWA (`index.html`, `manifest`, `sw.js`, `src/` e `assets/`); os códigos do servidor e dos testes permanecem no repositório, fora do site Pages.
+## Recursos de jogo
 
-## Controles
-
-- **Mestre:** menu Campanha, Mapas, Tokens, Fichas, Dados, Combate, Áudio e Sessão.
-- **Mapas:** arraste o fundo para mover; toque num token para selecioná-lo, arraste o token para reposicionar; pinça para zoom, clique duplo para centralizar. Ferramenta “+ Token”: escolha e toque no ponto do mapa. “Ocultar” e “Revelar”: arraste um retângulo no mapa; toque sozinho usa 90 × 90 px como pequeno pincel.
-- **Jogador:** abra `?room=SEU-CODIGO&role=player` e informe o código individual distribuído pelo Mestre.
-- **Projetor:** abra `?room=SEU-CODIGO&role=projector`. Não precisa da senha administrativa. Pode entrar em tela cheia se o navegador permitir.
-- **Dados:** use fórmulas `1D20+2`, `2D6+3` etc., ou toque nos botões.
-- **Campanhas:** para migrar de um aparelho para outro, use Exportar / Importar `.json`; não confie exclusivamente no armazenamento do navegador.
-
-## Regras incorporadas do livro
-
-O PDF de referência **TENEBRIA_REVISADO_3.0.pdf** (305 páginas) foi examinado. A distribuição inicial é de **8 pontos-base** com nenhum atributo zero; os quatro atributos são Físico, Habilidade, Vigor e Mental. Subatributos: Iniciativa H+M, Fadiga F+V, Vontade M+H, Resistência M+F, Defesa-base V (antes do equipamento). Limites confirmados: Humano F5/H5/V5/M5; Anão F6/H5/V6/M3; Elfo F4/H7/V4/M4; Gnomo F5/H4/V4/M7; Zetharin F5/H5/V5/M5. O livro prevê outras raças, classes, exceções, bônus e cálculos de PV; **a 0.1.0 não automatiza todos eles**. PV das fichas demo são valores de demonstração sujeitos a correção pelo Mestre. O livro integral não está incluído no ZIP.
+- **Campanhas:** IndexedDB local, autosalvamento, exportação/importação JSON, duas cenas de demonstração (masmorra e povoado), quatro personagens e encontro de combate. As campanhas compartilham os mesmos identificadores entre as modalidades; mudar de modo não cria novas fichas.
+- **Mapas:** importar PNG/JPEG/WebP (redução para 1800 × 1300), zoom/pinça, arrasto, grade quadrada e encaixe no centro das casas, névoa manual por retângulo e ferramenta para revelar, marcadores e medição de distância. Não há iluminação dinâmica ou colisão automática por obstáculos nesta versão.
+- **Tokens:** imagens, tamanho, rotação, vida, visibilidade, dono, bloqueio e ficha vinculada; movimentação autorizada, sincronizada e econômica. O Mestre pode corrigir fichas/posições a qualquer momento.
+- **Fichas:** atributos Físico, Habilidade, Vigor e Mental; subatributos Iniciativa H+M, Fadiga F+V, Vontade M+H, Resistência M+F; limites raciais de Humano, Anão, Elfo, Gnomo e Zetharin, extraídos de Tenebria Revisado 3.0. Qualidades, perícias, magias, habilidades, inventário e histórico são editáveis. PDFs anexados não são convertidos e os blobs ficam no dispositivo original.
+- **Dados:** D4/D6/D8/D10/D12/D20, modificadores e múltiplos dados, histórico compartilhado; o servidor calcula rolagens de jogador, ignorando valores falsificados. Rolagens privadas do Mestre não são enviadas aos clientes públicos.
+- **Combate:** participantes, iniciativa, ordem, rodadas, turnos, vida e condições, com intervenção manual do Mestre.
+- **Áudio:** importar sons locais, reproduzir em loop e ajustar volume; enviar comandos para efeitos incluídos. Sons importados não são distribuídos automaticamente aos participantes.
 
 ## Estrutura
 
-```text
-tenebria-vtt/
-  index.html, manifest.webmanifest, sw.js
-  src/
-    main.js       ciclo da aplicação e campanhas
-    ui.js         telas e controles
-    board.js      Canvas 2D, câmera, pinça, tokens, névoa
-    rules.js      atributos, validação e dados
-    demo.js       campanha demonstrativa
-    storage.js    IndexedDB, exportação e anexos
-    network.js    API HTTP + SSE do cliente
-    style.css     interface responsiva dark fantasy
-  server/
-    index.mjs     servidor HTTP, salas e SSE
-    room.mjs      permissões e estado público
-  assets/         mapas SVG, ícone, áudios WAV
-  tests/          testes unitários e HTTP integrados
-  scripts/        comando auxiliar Termux
-  .github/workflows/   testes e GitHub Pages
+```
+index.html                 entrada e menu de modalidades
+manifest.webmanifest      manifesto PWA
+sw.js                     cache de recursos locais
+src/main.js               campanhas, sessão e estado do cliente
+src/ui.js                 Mestre, Jogador, Sessão e menus
+src/board.js              renderização Canvas, token, grade, névoa, medição
+src/grid.js               encaixe no centro das casas
+src/network.js            conexão configurável, API HTTP e SSE
+src/storage.js            IndexedDB e importação/exportação
+src/rules.js              rolagens, atributos e limites de Tenebria
+src/demo.js               campanha de demonstração
+src/style.css             visual responsivo dark fantasy
+server/index.mjs          backend Node: salas, SSE, autorização, áudio
+server/room.mjs           projeção pública, filtragem e permissões
+assets/                   mapas e efeitos sonoros
+scripts/termux-start.sh  execução auxiliar em Android
+.github/workflows/        testes Node e publicação Pages
+tests/                    testes de regras, renderização e integração
 ```
 
-## Testes executados e limitações verificadas
+## Testes e limitações
 
-Execute `npm test`. Foram criados testes automatizados para atributos/limites, gerador de dados, campanha demo, separação de dados privados, códigos de convite, permissão de movimentação, servidor HTTP, SSE, persistência de alterações e rolagens no servidor. O teste HTTP foi executado localmente de ponta a ponta.
+Execute `npm test`. Os testes incluem regras e limites de Tenebria, renderização/encaixe, projeção privada, sessões com clientes independentes, atualizações SSE, movimentos autorizados, rolagem do servidor, retomada, encerramento/reabertura, som remoto, bloqueio de origens CORS e convites com códigos em fragmentos da URL.
 
-A inspeção gráfica automatizada por Chromium **não foi possível neste ambiente** por política de bloqueio administrativo do navegador; portanto, renderização, touch real, áudio Android, tela cheia e acesso ao projetor HY3000 **não foram comprovados em hardware**. Não foi realizado teste funcional em um Moto G34 ou projetor HY3000. A compatibilidade deve ser validada no dispositivo, com alternativa de reprodução usando um computador/TV box/celular externo conectado ao projetor.
+**Testes físicos ainda necessários:** Moto G34 com arrasto contínuo de tokens, estabilidade de Canvas, reprodução de áudio após toque, navegador do HY3000, modo horizontal, rede Wi-Fi sem internet e carga com muitos participantes. O Chromium automatizado deste ambiente não completou a inicialização; não tratamos a revisão visual como concluída.
 
-**Limitações 0.1.0:** iluminação dinâmica, grade hexagonal, áreas de efeito sofisticadas, dados 3D, transmissão de áudio remoto, armazenamento remoto de mapas/áudio em objeto dedicado, reconexão segura avançada, gerenciamento completo de condições/skills de todas as classes e importação automática de PDFs estão fora do escopo atual. A sala remota depende de hospedagem e disponibilidade do Node, e os arquivos de áudio/PDF importados permanecem no dispositivo original. Servidor público requer HTTPS, backup do diretório de salas, limites de uso, proteção contra abuso e política de retenção antes de exposição ampla.
-## Correção 0.1.2 — estabilidade do tabuleiro Android
+**Limitações adicionais:** QR Code ainda não implementado (há código e links de convite); sessões remotas exigem backend HTTPS; o servidor de exemplo usa arquivos JSON em uma única instância, não foi projetado para replicação horizontal; streaming de áudio importado e sincronização temporal precisa não existem; imagens do mapa compartilhado são incorporadas como WebP no estado e podem ser pesadas; até 9 MB por requisição. A PWA é instalável apenas em origens consideradas seguras pelo navegador (HTTPS ou localhost), e não necessariamente por HTTP de IP LAN. As fichas de classes e traços avançados estão previstos para versões futuras.
 
-Foi removida a opção de Canvas `desynchronized` para evitar a apresentação de quadros incompletos no Android, o observador de tamanho passou a acompanhar o contêiner e só redimensiona o bitmap quando necessário. Mapas e grades são pré-renderizados e reutilizados durante o arrasto de tokens, reduzindo o trabalho da GPU. O cache offline recebeu uma nova versão. Se o navegador mantiver a interface antiga, feche todas as abas do site e reabra a PWA após a atualização. Ainda é necessário validar a correção em Moto G34 e HY3000.
+O livro completo **TENEBRIA REVISADO 3.0** não é distribuído no projeto.

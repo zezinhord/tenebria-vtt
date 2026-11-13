@@ -59,7 +59,8 @@ function down(e){if(!scene())return;e.preventDefault();canvas.setPointerCapture(
   if(pointers.size===2){const pair=[...pointers.values()];pinch={distance:Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y),zoom:app.camera.zoom};drag=null;return;}
   const pos=point(e),w=toWorld(pos),s=scene();if(app.role==='projector')return;
   if(app.role==='master'&&app.tool==='add-token'){const id=uid(),pos=snap(w.x,w.y,s);const t={id,name:'Novo token',x:pos.x,y:pos.y,size:54,hp:10,maxHp:10,visible:true,locked:false,ownerId:null,color:'#cda268',conditions:[]};s.tokens.push(t);app.selectedTokenId=id;app.tool='select';app.changed('Token adicionado');app.render();invalidate();return;}
-  if(app.role==='master'&&['fog-add','fog-reveal'].includes(app.tool)){drag={type:app.tool,start:w,end:w};invalidate();return;}
+  if(app.role==='master'&&['fog-add','fog-reveal','measure'].includes(app.tool)){drag={type:app.tool,start:w,end:w};invalidate();return;}
+  if(app.role==='master'&&app.tool==='marker'){const label=prompt('Texto do marcador:','Ponto de interesse');if(label){s.markers=s.markers||[];s.markers.push({id:uid(),x:w.x,y:w.y,text:label.slice(0,64),visible:true});app.changed('Marcador adicionado');app.render();}return;}
   const t=tokenAt(w);if(t){app.selectedTokenId=t.id;app.render();if(permitted(t)&&!t.locked){drag={type:'token',id:t.id,dx:t.x-w.x,dy:t.y-w.y};}invalidate();return;}
   app.selectedTokenId=null;app.render();drag={type:'pan',p:pos,origX:app.camera.x,origY:app.camera.y};
 }
@@ -67,7 +68,8 @@ function move(e){if(!pointers.has(e.pointerId))return;const pos=point(e);pointer
   if(pointers.size===2){const pair=[...pointers.values()];const dst=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);if(pinch){const center={x:(pair[0].x+pair[1].x)/2,y:(pair[0].y+pair[1].y)/2};zoomAt(center,dst/pinch.distance);pinch.distance=dst;}return;}
   if(!drag)return;const w=toWorld(pos),s=scene();
   if(drag.type==='pan'){app.camera.x=drag.origX+pos.x-drag.p.x;app.camera.y=drag.origY+pos.y-drag.p.y;}
-  else if(drag.type==='token'){const t=s.tokens.find(t=>t.id===drag.id);if(t){const pos=snap(w.x+drag.dx,w.y+drag.dy,s);t.x=pos.x;t.y=pos.y;}}
+  else if(drag.type==='token'){const t=s.tokens.find(t=>t.id===drag.id);if(t){const pos=snap(w.x+drag.dx,w.y+drag.dy,s);if(t.x!==pos.x||t.y!==pos.y){t.x=pos.x;t.y=pos.y;
+      if(app.online?.session&&Date.now()-(drag.lastSync||0)>120){drag.lastSync=Date.now();app.sendMovement({type:'move',sceneId:s.id,tokenId:t.id,x:t.x,y:t.y});}}}}
   else drag.end=w;invalidate();
 }
 function subtract(rect,cut){const l=Math.max(rect.x,cut.x),r=Math.min(rect.x+rect.w,cut.x+cut.w),t=Math.max(rect.y,cut.y),b=Math.min(rect.y+rect.h,cut.y+cut.h);if(l>=r||t>=b)return [rect];return [
@@ -77,9 +79,11 @@ function subtract(rect,cut){const l=Math.max(rect.x,cut.x),r=Math.min(rect.x+rec
 function up(e){if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(pointers.size<2)pinch=null;
   if(!drag)return;const d=drag;drag=null;const s=scene();if(d.type==='token'){
     const t=s.tokens.find(t=>t.id===d.id);if(!t)return;
-    if(app.role==='player')app.playerPatch({type:'move',sceneId:s.id,tokenId:t.id,x:t.x,y:t.y});else app.changed('Token movido');
+    if(app.online?.session)app.sendMovement({type:'move',sceneId:s.id,tokenId:t.id,x:t.x,y:t.y});
+    if(app.role==='master')app.changed('Token movido');
     app.render();
   }
+  else if(d.type==='measure'){const distance=Math.hypot(d.end.x-d.start.x,d.end.y-d.start.y)/(s.grid?.size||60);app.toast(`Distância: ${distance.toFixed(1)} casas (grade de ${s.grid?.size||60}px).`);}
   else if(['fog-add','fog-reveal'].includes(d.type)&&app.role==='master'){
     const x=Math.min(d.start.x,d.end.x),y=Math.min(d.start.y,d.end.y);
     let cut={x,y,w:Math.abs(d.start.x-d.end.x),h:Math.abs(d.start.y-d.end.y)};
@@ -112,6 +116,7 @@ function paint(){dirty=false;if(!canvas.width||!canvas.height)return;const box=b
   }
   // Fog drawn after tokens: concealed areas also conceal token positions.
   if(app.role==='master'&&app.showFog===false){}else{for(const f of s.fog||[]){ctx.fillStyle='rgba(6,7,12,.96)';ctx.fillRect(f.x,f.y,f.w,f.h);ctx.strokeStyle='rgba(184,137,84,.4)';ctx.lineWidth=3;ctx.strokeRect(f.x,f.y,f.w,f.h);}}
+  if(drag?.type==='measure'){const from=drag.start,to=drag.end;ctx.strokeStyle='#e6c177';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);ctx.stroke();ctx.font='bold 19px system-ui';ctx.fillStyle='#f5dba3';ctx.fillText((Math.hypot(to.x-from.x,to.y-from.y)/(s.grid?.size||60)).toFixed(1)+' casas',to.x+12,to.y-8);}
   if(drag&&['fog-add','fog-reveal'].includes(drag.type)){const x=Math.min(drag.start.x,drag.end.x),y=Math.min(drag.start.y,drag.end.y),pw=Math.abs(drag.start.x-drag.end.x),ph=Math.abs(drag.start.y-drag.end.y);ctx.fillStyle=drag.type==='fog-add'?'rgba(12,12,20,.55)':'rgba(131,193,183,.32)';ctx.fillRect(x,y,pw,ph);ctx.strokeStyle='#b9cebc';ctx.lineWidth=3;ctx.strokeRect(x,y,pw,ph);}
   ctx.restore();
   ctx.fillStyle='rgba(15,16,21,.8)';ctx.fillRect(12,h-31,193,23);ctx.fillStyle='#d9c4a2';ctx.textAlign='left';ctx.font='12px system-ui';ctx.fillText(`Zoom ${Math.round(app.camera.zoom*100)}% · ${s.grid?.size||60}px/casa`,20,h-15);
