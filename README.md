@@ -1,8 +1,22 @@
-# TENEBRIA VTT 0.2.0 — Fichas e regras de criação
+# TENEBRIA VTT 0.2.1 — Importação assistida de fichas
+
+## Novo: importar ficha e criar personagem
+
+1. Abra a campanha e entre em **Ferramentas → Fichas → ↑ Importar ficha**.
+2. Selecione um **PDF com texto selecionável**, **TXT** ou **JSON de personagem** de até **12 MB**.
+3. O aplicativo tenta reconhecer nome, raça, classe, nível, Físico, Habilidade, Vigor, Mental, PV e bônus de defesa, além de seções textuais quando identificadas.
+4. **Revise os campos**: valores faltantes permanecem em branco. Corrija os avisos e confirme **Criar personagem**.
+5. Se deixar marcada a opção **Criar token no mapa atual**, o token será gerado automaticamente e vinculado à nova ficha.
+
+**Limitações importantes:** o reconhecimento usa campos e rótulos do documento, não IA. Fichas com diagramação incomum podem precisar de correções. **Não há OCR** para PDFs escaneados ou imagens nesta versão. PDF.js (Mozilla, Apache 2.0, versão fixa 4.10.38) extrai o texto **localmente no navegador**: o PDF não é enviado a um serviço de IA. A primeira instalação exige `npm install` para preparar o leitor de PDF (isso já é executado pela publicação automática do GitHub Pages). A cópia original do PDF é guardada no IndexedDB do dispositivo do Mestre e pode ser incluída na exportação da campanha. Jogadores conectados não recebem o PDF original pelo protocolo de sala.
+
+**Proteção dos dados:** nenhuma ficha é criada antes da confirmação. Atribuição de oito pontos de nível 1 e limites raciais seguem as regras verificadas do livro. Não são inventadas habilidades ou bônus ausentes. Campanhas e fichas já existentes continuam intactas.
+
+# TENEBRIA VTT 0.2.1 — Fichas e regras de criação
 
 Mesa virtual dark fantasy para **Tenebria Revisado 3.0**. Uma única PWA para celulares Android, computadores e navegadores compatíveis de televisores/projetores. O mesmo núcleo guarda campanhas, mapas, fichas, tokens, dados, combate, sons e permissões. Desenvolvido sobre a base **0.1.2**, sem reiniciar o projeto.
 
-## Novidades da 0.2.0 — primeiro incremento de fichas avançadas
+## Novidades da 0.2.1 — primeiro incremento de fichas avançadas
 
 - **27 raças catalogadas** diretamente do livro *Tenebria Revisado 3.0*, com seus limites Físico/Habilidade/Vigor/Mental e deslocamento básico. O Satirino tem 12 m na forma verdadeira e 7 m na forma oculta; a ficha mostra essa ressalva. O campo de raça mantém valores legados/customizados e não modifica atributos ao trocar de raça.
 - **27 classes oficiais** disponíveis em lista, incluindo Espadachim Oriental, Mago, Monge, Sacerdote, Patrulheiro e Sem Caminho. Classes personalizadas de fichas antigas continuam exibidas.
@@ -34,13 +48,13 @@ PWA pública: **https://zezinhord.github.io/tenebria-vtt/** — funciona como ap
 **Opção A — PC ou notebook como servidor:**
 
 1. Baixe o projeto, extraia o ZIP ou clone este repositório.
-2. Instale **Node.js 20 ou superior**, entre na pasta do projeto e execute `npm start`. Não é necessário instalar pacotes adicionais.
+2. Instale **Node.js 20 ou superior**, entre na pasta do projeto e execute `npm install` uma vez e depois `npm start`. Não é necessário instalar pacotes adicionais.
 3. Conecte celular, computador e projetor/receptor à mesma rede Wi-Fi ou hotspot. Descubra o IP local do computador.
 4. No navegador do Mestre, abra `http://IP-DO-COMPUTADOR:4173` (não o endereço GitHub Pages). Escolha **Mesa Presencial → Criar sala presencial**.
 5. Copie o **link do projetor** e abra-o no navegador do dispositivo ligado ao projetor. Esse aparelho recebe somente a visualização pública. Ative a tela cheia pelo navegador, quando suportado.
 6. Compartilhe os links/códigos dos jogadores para permitir acesso individual, caso queiram controlar os próprios tokens.
 
-**Opção B — somente celular Android como servidor (Termux):** instale o Termux, execute `pkg update && pkg install nodejs`, extraia este projeto numa pasta acessível e, dentro dela, use `npm start`. O celular deve manter o Termux rodando durante toda a sessão. No próprio celular, abra `http://localhost:4173`; no projetor/receptor abra `http://IP-DO-CELULAR:4173`. O servidor escuta na interface de rede `0.0.0.0`. O hotspot deve permitir comunicação entre clientes (isolamento de AP desativado). Faça backup das campanhas. Alguns Androids podem suspender o Termux quando o aplicativo fica em segundo plano; desative sua otimização de bateria, se necessário.
+**Opção B — somente celular Android como servidor (Termux):** instale o Termux, execute `pkg update && pkg install nodejs`, extraia este projeto numa pasta acessível e, dentro dela, use `npm install` e depois `npm start`. O celular deve manter o Termux rodando durante toda a sessão. No próprio celular, abra `http://localhost:4173`; no projetor/receptor abra `http://IP-DO-CELULAR:4173`. O servidor escuta na interface de rede `0.0.0.0`. O hotspot deve permitir comunicação entre clientes (isolamento de AP desativado). Faça backup das campanhas. Alguns Androids podem suspender o Termux quando o aplicativo fica em segundo plano; desative sua otimização de bateria, se necessário.
 
 O navegador do **HY3000 não foi testado fisicamente**. Caso seja limitado, utilize um notebook, TV box, Chromecast compatível ou outro celular ligado ao projetor e abra nele o modo público. **Espelhamento** da tela do Mestre não substitui uma segunda tela pública: pode expor controles e notas privadas.
 
@@ -99,3 +113,14 @@ Execute `npm test`. Os testes incluem regras e limites de Tenebria, renderizaç�
 **Limitações adicionais:** QR Code ainda não implementado (há código e links de convite); sessões remotas exigem backend HTTPS; o servidor de exemplo usa arquivos JSON em uma única instância, não foi projetado para replicação horizontal; streaming de áudio importado e sincronização temporal precisa não existem; imagens do mapa compartilhado são incorporadas como WebP no estado e podem ser pesadas; até 9 MB por requisição. A PWA é instalável apenas em origens consideradas seguras pelo navegador (HTTPS ou localhost), e não necessariamente por HTTP de IP LAN. A automatização detalhada das habilidades e traços de classes ainda será ampliada ao longo da versão 0.2.x.
 
 O livro completo **TENEBRIA REVISADO 3.0** não é distribuído no projeto.
+
+## Arquivos adicionados na 0.2.1
+
+- `src/sheet-import.js`: extração e revisão de campos com regras e avisos
+- `src/pdf-reader.js`: leitura PDF.js (texto e formulários PDF)
+- `scripts/prepare-pdfjs.mjs`: copia biblioteca e worker para `vendor/` após `npm install`
+- `tests/sheet-import.test.mjs`: testes para detecção, validação e ausência de preenchimento inventado
+- `.github/workflows/{check,pages}.yml`: instalação do leitor durante testes e publicação
+- `Dockerfile`: prepara dependências na construção do container
+
+O GitHub Pages hospeda apenas a interface; sala online continua exigindo backend HTTPS separado.

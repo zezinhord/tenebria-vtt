@@ -92,7 +92,7 @@ async function api(req,res,url){
   }
   return reply(res,404,{error:'Endpoint inexistente.'});
 }
-const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.ico':'image/x-icon','.wav':'audio/wav'};
+const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.ico':'image/x-icon','.wav':'audio/wav'};
 const server=http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://localhost'),origin=req.headers.origin;
   res.setHeader('x-content-type-options','nosniff');res.setHeader('referrer-policy','no-referrer');

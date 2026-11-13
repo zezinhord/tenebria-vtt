@@ -12,3 +12,14 @@
 .power-line .button-row{margin:7px 0 0}
 .power-line button{font-size:11px;padding:5px 9px}
 @media(max-width:375px){.panel .grid4{gap:3px}.panel .grid4 label{font-size:9px}.panel .grid4 input{padding:8px 3px}}
+
+/* 0.2.1: formulário compacto de revisão do documento; não remove campos sem confirmação. */
+.import-review{margin:12px 0 16px;padding:12px;border:1px solid #c49b64;border-radius:12px;background:linear-gradient(165deg,#342a27,#211f21);box-shadow:0 6px 18px #0004}
+.import-review h4{margin:5px 0 10px;color:#f0d2a1}
+.import-review .notice{max-height:150px;overflow:auto}
+.import-review ul{padding-left:18px;margin:6px 0}
+.import-review .grid4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.import-review .grid4 input{min-width:0;padding:7px 3px;font-size:14px}
+.import-review .import-check{display:flex;align-items:center;gap:8px;font-size:12px;line-height:1.4;margin:10px 0}
+.import-review .import-check input{width:auto;flex:0 0 auto}
+.import-review .button-row button{white-space:normal}

@@ -33,11 +33,31 @@ function tokenPanel(){const s=scene(),master=app.role==='master';const tokens=s.
       <label>Condições (separadas por vírgula)<input data-token-field="conditions" value="${E((t.conditions||[]).join(', '))}"></label>
       <div class="button-row">${b('import-token-image','↑ Imagem')}${b('delete-token','Remover','danger')}</div>`:''}
       ${t?.sheetId?`<div class="notice">Vinculado à ficha: ${E(c.sheets.find(s=>s.id===t.sheetId)?.name||'não encontrada')}</div>`:''}`:''}`;}
+function sheetImportReview(){
+  const draft=app.sheetImportDraft;if(!draft||app.role!=='master')return '';
+  const d=draft.data||{},a=d.attributes||{};
+  const input=(name,label,val,type='text')=>`<label>${E(label)}<input name="${E(name)}" type="${type}" value="${E(val??'')}" ${type==='number'?'min="0"':''} placeholder="${val===null||val===undefined||val===''?'Não identificado — preencher':'Conferir'}"></label>`;
+  const picker=(field,label,items,val)=>`<label>${E(label)}<select name="${field}"><option value="">Escolher...</option>${items.map(v=>`<option value="${E(v)}"${sel(v,val)}>${E(v)}</option>`).join('')}</select></label>`;
+  return `<section class="import-review"><div class="heading"><h4>Revisar ficha importada</h4>${b('cancel-import-sheet','Cancelar')}</div>
+    <p class="mini">Arquivo: <strong>${E(draft.filename)}</strong> · ${E(draft.format.toUpperCase())}. ${draft.detected.length} campos principais identificados. Campos vazios não são inventados.</p>
+    ${(draft.warnings||[]).length?`<div class="notice"><strong>Verificar:</strong><ul>${draft.warnings.slice(0,12).map(w=>`<li>${E(w)}</li>`).join('')}</ul></div>`:''}
+    ${(app.sheetImportErrors||[]).length?`<div class="notice"><strong>Corrigir antes de criar:</strong><ul>${app.sheetImportErrors.map(w=>`<li class="warn">${E(w)}</li>`).join('')}</ul></div>`:''}
+    <form id="sheet-import-review" novalidate>
+    ${input('name','Nome',d.name)}
+    <div class="grid2">${picker('race','Raça',RACE_NAMES,d.race)}${picker('cls','Classe',CLASS_NAMES,d.cls)}</div>
+    <div class="grid2">${input('level','Nível',d.level,'number')}${input('armor','Bônus de defesa',d.armor,'number')}</div>
+    <h4>Atributos-base</h4><div class="grid4">${ATTRIBUTE_KEYS.map(k=>input(k,ATTRIBUTE_LABELS[k],a[k],'number')).join('')}</div>
+    <div class="grid2">${input('hp','PV atuais',d.hp,'number')}${input('maxHp','PV máximos',d.maxHp,'number')}</div>
+    <label class="import-check"><input name="createToken" type="checkbox" checked> Criar token no mapa atual e vincular à ficha</label>
+    <p class="mini">A ficha só será criada após a confirmação. Atributos de nível 1 devem somar oito pontos. O PDF original, quando importado, será anexado à ficha no dispositivo do Mestre.</p>
+    <div class="button-row">${b('confirm-import-sheet','✓ Criar personagem','primary')}${b('cancel-import-sheet','Cancelar')}</div>
+    </form></section>`;
+}
 function sheetPanel(){const c=app.campaign,master=app.role==='master',sheets=master?c.sheets:c.sheets.filter(s=>s.playerId===app.playerId);if(!sheets.find(s=>s.id===app.selectedSheetId))app.selectedSheetId=sheets[0]?.id||null;
   const s=sheets.find(s=>s.id===app.selectedSheetId);const errs=s?validateCreation(s):[],der=s?sheetSummary(s):null;
   const readonlyField=f=>master?'':(['notes','history','equipment','weapons','skills','abilities','spells'].includes(f)?'':' disabled');
   const input=(f,label,multi=false)=>`<label>${label}${multi?`<textarea data-sheet-field="${f}"${readonlyField(f)}>${E(s[f]||'')}</textarea>`:`<input data-sheet-field="${f}" value="${E(s[f]??'')}"${readonlyField(f)}>`}</label>`;
-  return `<div class="heading"><h3>Fichas digitais</h3>${master?b('add-sheet','+ Ficha','primary'):''}</div>${sheets.map(x=>item(x.id,x.name,`${x.race} · ${x.cls} · Nível ${x.level}`,'sheet',x.id===s?.id)).join('')}
+  return `<div class="heading"><h3>Fichas digitais</h3>${master?b('import-sheet','↑ Importar ficha','primary')+b('add-sheet','+ Ficha'):''}</div>${sheetImportReview()}${sheets.map(x=>item(x.id,x.name,`${x.race} · ${x.cls} · Nível ${x.level}`,'sheet',x.id===s?.id)).join('')}
   ${s?`<hr class="rule"><h4>${E(s.name)}</h4>${input('name','Nome')}
   <div class="grid2"><label>Raça<select data-sheet-field="race"${readonlyField('race')}>${[...RACE_NAMES,...(!RACES[s.race]?[s.race]:[])].map(r=>`<option value="${E(r)}"${sel(r,s.race)}>${E(r)}</option>`).join('')}</select></label><label>Classe<select data-sheet-field="cls"${readonlyField('cls')}>${[...CLASS_NAMES,...(!CLASS_NAMES.includes(s.cls)?[s.cls]:[])].map(v=>`<option value="${E(v)}"${sel(v,s.cls)}>${E(v)}</option>`).join('')}</select></label></div>
   <div class="grid2"><label>Nível<input type="number" min="1" max="30" data-sheet-field="level" value="${s.level}"${readonlyField('level')}></label><label>Jogador<select data-sheet-field="playerId"${readonlyField('playerId')}><option value="">Mestre</option>${Object.entries(c.slotNames||{}).map(([id,name])=>`<option value="${id}"${sel(s.playerId,id)}>${E(name)}</option>`).join('')}</select></label></div>
@@ -53,7 +73,7 @@ function sheetPanel(){const c=app.campaign,master=app.role==='master',sheets=mas
   <p class="mini">Qualidades: uma por linha no campo abaixo. Humano tem direito a uma qualidade extra. Custos de habilidades devem ser conferidos nas páginas da classe do livro. Os pontos excedentes são destacados e nunca apagados automaticamente.</p>
   <div class="heading"><h4>Habilidades compradas (registro de pontos)</h4>${master?b('add-class-power','+ Habilidade'):''}</div>
   ${(s.classPowers||[]).map((pow,i)=>`<div class="power-line"><label>Nome<input data-power-field="name" data-power-index="${i}" value="${E(pow.name||'')}"${disabled()} placeholder="Habilidade conforme o livro"></label><div class="grid2"><label>Níveis<input data-power-field="levels" data-power-index="${i}" type="number" min="1" max="30" value="${E(pow.levels??1)}"${disabled()}></label><label>Custo por nível<input data-power-field="costPerLevel" data-power-index="${i}" type="number" min="1" max="15" value="${E(pow.costPerLevel??1)}"${disabled()}></label></div>${master?`<div class="button-row"><button data-action="remove-class-power" data-power-index="${i}" class="danger">Remover habilidade</button></div>`:''}</div>`).join('')||'<p class="mini">Nenhuma habilidade comprada registrada.</p>'}
-  <hr class="rule"><h4>Ficha em PDF</h4><p class="mini">${E(s.pdfName||'Nenhum PDF anexado. A anexação não extrai automaticamente os campos.')}</p><div class="button-row">${master?b('attach-pdf','↑ Anexar PDF'):''}${s.pdfKey?b('view-pdf','Abrir PDF'):''}</div>
+  <hr class="rule"><h4>Ficha em PDF</h4><p class="mini">${E(s.pdfName||'Nenhum PDF anexado. Este PDF foi anexado apenas como referência. Para criar um novo personagem lendo os dados, use Importar ficha.')}</p><div class="button-row">${master?b('attach-pdf','↑ Anexar PDF'):''}${s.pdfKey?b('view-pdf','Abrir PDF'):''}</div>
   ${input('skills','Perícias',true)}${input('qualities','Qualidades (uma por linha)',true)}${input('flaws','Defeitos',true)}${input('equipment','Equipamentos e inventário',true)}${input('weapons','Armas e armaduras',true)}${input('abilities','Habilidades',true)}${input('spells','Magias',true)}${input('history','Histórico',true)}${input('notes','Notas de jogador',true)}
   ${master?b('delete-sheet','Excluir ficha','danger'):''}<p class="mini">Versão 0.2.0: 27 raças, 27 classes, orçamento de qualidades e cinco pontos iniciais de habilidades. PV e habilidades específicas continuam sob controle do Mestre até serem verificados no livro.</p>`:
     `<p class="notice">Sem fichas disponíveis. ${master?'Crie uma ficha para começar.':'Peça ao Mestre para associar um personagem ao seu código.'}</p>`}`;}
@@ -150,6 +170,9 @@ export function initUI(a){app=a;
     if(act==='import-token-image'&&master){document.getElementById('file-token').click();return;}
     if(act==='delete-token'&&master){s.tokens=s.tokens.filter(t=>t.id!==app.selectedTokenId);app.selectedTokenId=null;app.changed('Token excluído');app.render();return;}
     if(act==='attach-pdf'&&master){document.getElementById('file-pdf').click();return;}
+    if(act==='import-sheet'&&master){document.getElementById('file-sheet-import').click();return;}
+    if(act==='cancel-import-sheet'&&master){app.sheetImportDraft=null;app.sheetImportErrors=[];app.render();return;}
+    if(act==='confirm-import-sheet'&&master){const form=document.getElementById('sheet-import-review');if(!form)return;const values=Object.fromEntries(new FormData(form));await app.confirmSheetImport(values,!!form.querySelector('[name="createToken"]:checked'));return;}
     if(act==='view-pdf'){await app.viewSheetPdf();return;}
     if(act==='add-sheet'&&master){const id=uid();c.sheets.push({id,name:'Novo personagem',race:'Humano',cls:'Guerreiro',level:1,attributes:{physical:2,skill:2,vigor:2,mental:2},hp:10,maxHp:10,armor:0,skills:'',qualities:'',flaws:'',equipment:'',weapons:'',abilities:'',spells:'',history:'',notes:'',playerId:'',classPowers:[]});app.selectedSheetId=id;app.changed('Ficha criada');app.render();return;}
     if(act==='add-class-power'&&master){const sheet=c.sheets.find(x=>x.id===app.selectedSheetId);if(!sheet)return;sheet.classPowers??=[];sheet.classPowers.push({id:uid(),name:'',levels:1,costPerLevel:1});app.changed('Habilidade adicionada');app.render();return;}
@@ -188,6 +211,7 @@ export function initUI(a){app=a;
     if(el.id==='file-map'){if(el.files?.[0])await app.importMap(el.files[0]);el.value='';return;}
     if(el.id==='file-token'){if(el.files?.[0])await app.importTokenImage(el.files[0]);el.value='';return;}
     if(el.id==='file-audio'){if(el.files?.[0])await app.importAudio(el.files[0]);el.value='';return;}
+    if(el.id==='file-sheet-import'){if(el.files?.[0])await app.analyzeSheetFile(el.files[0]);el.value='';return;}
     if(el.id==='file-pdf'){if(el.files?.[0])await app.importSheetPdf(el.files[0]);el.value='';return;}
     if(el.id==='file-campaign'){if(el.files?.[0])await app.import(el.files[0]);el.value='';return;}
     if(el.id==='audio-target'){app.audioTarget=el.value;return;}
