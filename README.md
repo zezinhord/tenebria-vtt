@@ -39,9 +39,9 @@ A solução tecnicamente mais direta para hospedar o servidor **na rede local** 
 
 ## GitHub Pages e publicação
 
-Os arquivos `.github/workflows/check.yml` e `pages.yml` foram incluídos para CI e publicação estática no GitHub Pages. Crie um repositório **novo e separado** `tenebria-vtt`, envie todo o conteúdo do ZIP preservando a estrutura, ative em *Settings → Pages → Build and deployment → GitHub Actions*. O fluxo de teste executa `npm test`, e o de Pages publica a PWA estática. **GitHub Pages não executa `server/index.mjs`**: nessa publicação, campanhas locais funcionam, mas salas online só funcionam com a aplicação hospedada no servidor Node (não há seleção de backend remoto na 0.1.0).
+Os arquivos `.github/workflows/check.yml` e `pages.yml` foram incluídos para CI e publicação estática no GitHub Pages. O código está no repositório **[zezinhord/tenebria-vtt](https://github.com/zezinhord/tenebria-vtt)**. Para publicar, ative *Settings → Pages → Build and deployment → GitHub Actions*, se necessário. Após a execução bem-sucedida do workflow de publicação, a PWA estática deverá ficar em **https://zezinhord.github.io/tenebria-vtt/**. O fluxo de teste executa `npm test`, e o de Pages publica a PWA estática. **GitHub Pages não executa `server/index.mjs`**: nessa publicação, campanhas locais funcionam, mas salas online só funcionam com a aplicação hospedada no servidor Node (não há seleção de backend remoto na 0.1.0).
 
-O repositório **não foi criado automaticamente**. Estes arquivos o deixam pronto para o upload e a publicação.
+O workflow publica somente os recursos estáticos da PWA (`index.html`, `manifest`, `sw.js`, `src/` e `assets/`); os códigos do servidor e dos testes permanecem no repositório, fora do site Pages.
 
 ## Controles
 
