@@ -1,4 +1,5 @@
 import {uid} from './rules.js';
+import {snapTokenPosition} from './grid.js';
 let canvas,ctx,app,cache=new Map(),pointers=new Map(),drag=null,pinch=null,dirty=true;
 // Keep the static scene bitmap separate from moving tokens to reduce mobile GPU work.
 let staticScene=null;
@@ -53,11 +54,11 @@ export function toWorld(p){return {x:(p.x-app.camera.x)/app.camera.zoom,y:(p.y-a
 export function zoomAt(p,mult){const cam=app.camera,w=toWorld(p);cam.zoom=Math.max(.12,Math.min(4.5,cam.zoom*mult));cam.x=p.x-w.x*cam.zoom;cam.y=p.y-w.y*cam.zoom;invalidate();}
 function tokenAt(w){const s=scene();return [...s.tokens].reverse().find(t=>Math.hypot(t.x-w.x,t.y-w.y)<(t.size||50)*.65);}
 export function permitted(t){return app.role==='master'||(app.role==='player'&&t.ownerId===app.playerId&&!t.locked);}
-const snap=(v,s)=>app.campaign.settings?.snap&&s.grid?.enabled?Math.round(v/s.grid.size)*s.grid.size:v;
+const snap=(x,y,s)=>snapTokenPosition(x,y,s,app.campaign.settings?.snap);
 function down(e){if(!scene())return;e.preventDefault();canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,point(e));
   if(pointers.size===2){const pair=[...pointers.values()];pinch={distance:Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y),zoom:app.camera.zoom};drag=null;return;}
   const pos=point(e),w=toWorld(pos),s=scene();if(app.role==='projector')return;
-  if(app.role==='master'&&app.tool==='add-token'){const id=uid();const t={id,name:'Novo token',x:snap(w.x,s),y:snap(w.y,s),size:54,hp:10,maxHp:10,visible:true,locked:false,ownerId:null,color:'#cda268',conditions:[]};s.tokens.push(t);app.selectedTokenId=id;app.tool='select';app.changed('Token adicionado');app.render();invalidate();return;}
+  if(app.role==='master'&&app.tool==='add-token'){const id=uid(),pos=snap(w.x,w.y,s);const t={id,name:'Novo token',x:pos.x,y:pos.y,size:54,hp:10,maxHp:10,visible:true,locked:false,ownerId:null,color:'#cda268',conditions:[]};s.tokens.push(t);app.selectedTokenId=id;app.tool='select';app.changed('Token adicionado');app.render();invalidate();return;}
   if(app.role==='master'&&['fog-add','fog-reveal'].includes(app.tool)){drag={type:app.tool,start:w,end:w};invalidate();return;}
   const t=tokenAt(w);if(t){app.selectedTokenId=t.id;app.render();if(permitted(t)&&!t.locked){drag={type:'token',id:t.id,dx:t.x-w.x,dy:t.y-w.y};}invalidate();return;}
   app.selectedTokenId=null;app.render();drag={type:'pan',p:pos,origX:app.camera.x,origY:app.camera.y};
@@ -66,7 +67,7 @@ function move(e){if(!pointers.has(e.pointerId))return;const pos=point(e);pointer
   if(pointers.size===2){const pair=[...pointers.values()];const dst=Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);if(pinch){const center={x:(pair[0].x+pair[1].x)/2,y:(pair[0].y+pair[1].y)/2};zoomAt(center,dst/pinch.distance);pinch.distance=dst;}return;}
   if(!drag)return;const w=toWorld(pos),s=scene();
   if(drag.type==='pan'){app.camera.x=drag.origX+pos.x-drag.p.x;app.camera.y=drag.origY+pos.y-drag.p.y;}
-  else if(drag.type==='token'){const t=s.tokens.find(t=>t.id===drag.id);if(t){t.x=Math.max(0,Math.min(s.width,snap(w.x+drag.dx,s)));t.y=Math.max(0,Math.min(s.height,snap(w.y+drag.dy,s)));}}
+  else if(drag.type==='token'){const t=s.tokens.find(t=>t.id===drag.id);if(t){const pos=snap(w.x+drag.dx,w.y+drag.dy,s);t.x=pos.x;t.y=pos.y;}}
   else drag.end=w;invalidate();
 }
 function subtract(rect,cut){const l=Math.max(rect.x,cut.x),r=Math.min(rect.x+rect.w,cut.x+cut.w),t=Math.max(rect.y,cut.y),b=Math.min(rect.y+rect.h,cut.y+cut.h);if(l>=r||t>=b)return [rect];return [

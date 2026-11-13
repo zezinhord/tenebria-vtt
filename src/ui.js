@@ -1,5 +1,6 @@
 import {RACES,ATTRIBUTE_KEYS,ATTRIBUTE_LABELS,derived,validateAttributes,esc,uid} from './rules.js';
 import {scene,invalidate,fitScene,zoomAt} from './board.js';
+import {snapTokenPosition} from './grid.js';
 let app;
 const nav=[['campaign','◆','Campanha'],['maps','▦','Mapas'],['tokens','♟','Tokens'],['sheets','▤','Fichas'],['dice','⚄','Dados'],['combat','⚔','Combate'],['audio','♫','Áudio'],['session','◉','Sessão']];
 const E=esc,sel=(a,b)=>String(a)===String(b)?' selected':'',checked=v=>v?' checked':'',disabled=()=>app.role==='master'?'':' disabled';
@@ -15,8 +16,8 @@ function mapsPanel(){const c=app.campaign,s=scene(),master=app.role==='master';r
   ${master?`<label>Nome da cena<input data-scene-field="name" value="${E(s.name)}"></label><div class="button-row">${b('import-map','⬆ Importar mapa','primary')}${b('remove-map','Limpar imagem','subtle')}</div>`:''}
   <div class="button-row">${b('fit','⊡ Enquadrar')}${b('zoom-in','＋ Zoom')}${b('zoom-out','－ Zoom')}</div>
   ${master?`<hr class="rule"><h4>Grade</h4><div class="grid2"><label>Tamanho (pixels)<input type="number" min="20" max="250" data-scene-field="grid.size" value="${s.grid.size}"></label><label>Grade visível<select data-scene-field="grid.enabled"><option value="true"${sel(s.grid.enabled,true)}>Sim</option><option value="false"${sel(s.grid.enabled,false)}>Não</option></select></label></div>
-    <label><input type="checkbox" data-settings-field="snap"${checked(c.settings.snap)}> Alinhar tokens à grade</label><label><input type="checkbox" data-settings-field="animations"${checked(c.settings.animations!==false)}> Animações leves</label>
-    <hr class="rule"><h4>Ferramentas</h4><div class="button-row">${['select','add-token','fog-add','fog-reveal'].map((tool,i)=>`<button class="${app.tool===tool?'selected-tool':''}" data-action="tool" data-value="${tool}">${['↖ Selecionar','+ Token','▓ Ocultar','✧ Revelar'][i]}</button>`).join('')}</div>
+    <label><input type="checkbox" data-settings-field="snap"${checked(c.settings.snap)}> Encaixar tokens no centro das casas</label><label><input type="checkbox" data-settings-field="animations"${checked(c.settings.animations!==false)}> Animações leves</label>
+    <div class="button-row">${b('center-tokens','⊞ Centralizar tokens nas casas')}</div><p class="mini">O encaixe move cada token de casa em casa, sempre pelo centro. Use o botão acima para corrigir tokens de campanhas anteriores.</p><hr class="rule"><h4>Ferramentas</h4><div class="button-row">${['select','add-token','fog-add','fog-reveal'].map((tool,i)=>`<button class="${app.tool===tool?'selected-tool':''}" data-action="tool" data-value="${tool}">${['↖ Selecionar','+ Token','▓ Ocultar','✧ Revelar'][i]}</button>`).join('')}</div>
     <div class="button-row">${b('show-fog',app.showFog?'Ver sem névoa':'Ver com névoa')}${b('clear-fog','Revelar tudo')}</div><p class="mini">Para desenhar ou revelar névoa, escolha a ferramenta e arraste no mapa. A prévia sem névoa é exclusiva do Mestre.</p>`:
     `<p class="notice">Arraste os seus personagens para movimentá-los. Faça pinça para aproximar o mapa.</p>`}
     <hr class="rule"><p class="mini">Cena: ${s.width} × ${s.height} px · ${s.tokens.length} tokens · ${s.fog?.length||0} áreas de névoa.</p>`;}
@@ -100,6 +101,11 @@ export function initUI(a){app=a;
     if(act==='tab'){app.selectedTab=el.dataset.value;app.render();return;}
     if(act==='select-scene'){c.sceneId=id;app.render();fitScene();return;}
     if(act==='select-campaign'){await app.loadCampaign(id);return;}
+    if(act==='center-tokens'&&master){
+      if(!s.grid?.enabled){app.toast('Ative a grade para centralizar os tokens.');return;}
+      for(const t of s.tokens){const pos=snapTokenPosition(t.x,t.y,s,true);t.x=pos.x;t.y=pos.y;}
+      app.changed('Tokens centralizados nas casas');app.render();return;
+    }
     if(act==='select-token'){app.selectedTokenId=id;app.render();return;}
     if(act==='select-sheet'){app.selectedSheetId=id;app.render();return;}
     if(act==='roll'){app.rollInput=document.getElementById('dice-formula')?.value||'1D20';app.rollPrivate=!!document.getElementById('private-roll')?.checked;await app.rollDice(app.rollInput,app.rollPrivate);return;}

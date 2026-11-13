@@ -1,5 +1,6 @@
 import {randomBytes,createHash,timingSafeEqual} from 'node:crypto';
 import {roll} from '../src/rules.js';
+import {snapTokenPosition} from '../src/grid.js';
 const random=n=>randomBytes(n).toString('base64url');
 export const digest=s=>createHash('sha256').update(String(s)).digest('hex');
 export const secureMatch=(x,y)=>{const a=Buffer.from(digest(x),'hex'),b=Buffer.from(y,'hex');return timingSafeEqual(a,b);};
@@ -36,7 +37,8 @@ export function applyPlayerPatch(c,playerId,patch){
     const scene=out.scenes.find(s=>s.id===patch.sceneId);const token=scene?.tokens.find(t=>t.id===patch.tokenId);
     if(!token||token.ownerId!==playerId||token.locked)return null;
     if(!Number.isFinite(patch.x)||!Number.isFinite(patch.y))return null;
-    token.x=Math.max(0,Math.min(scene.width,patch.x));token.y=Math.max(0,Math.min(scene.height,patch.y));return out;
+    const pos=snapTokenPosition(patch.x,patch.y,scene,out.settings?.snap);
+    token.x=pos.x;token.y=pos.y;return out;
   }
   if(patch.type==='dice'){
     if(typeof patch.formula!=='string')return null;

@@ -17,7 +17,7 @@ test('Fluxo HTTP real: sala, códigos, projeção segura, movimentação e rolag
   assert.equal((await request('/api/patch',{session:projector.session,patch:{type:'move',sceneId:'dungeon',tokenId:'t1',x:250,y:390}}))[0],403);
   assert.equal((await request('/api/patch',{session:player.session,patch:{type:'move',sceneId:'dungeon',tokenId:'t2',x:250,y:390}}))[0],403);
   assert.equal((await request('/api/patch',{session:player.session,patch:{type:'move',sceneId:'dungeon',tokenId:'t1',x:250,y:390}}))[0],200);
-  const [qr,playerAgain]=await request('/api/join',{roomId:room.roomId,role:'player',code:room.playerCodes.p1});assert.equal(qr,200);assert.equal(playerAgain.campaign.scenes[0].tokens.find(t=>t.id==='t1').x,250);
+  const [qr,playerAgain]=await request('/api/join',{roomId:room.roomId,role:'player',code:room.playerCodes.p1});assert.equal(qr,200);assert.equal(playerAgain.campaign.scenes[0].tokens.find(t=>t.id==='t1').x,270);
   assert.equal((await request('/api/patch',{session:player.session,patch:{type:'dice',formula:'2D6+3',total:9999,details:['hacked']}}))[0],200);
   const [,projectorAgain]=await request('/api/join',{roomId:room.roomId,role:'projector'});const r=projectorAgain.campaign.rollHistory[0];assert.ok(r.total>=5&&r.total<=15);assert.notEqual(r.total,9999);
   const controller=new AbortController();const es=await fetch(root+'/api/events?session='+projector.session,{signal:controller.signal});assert.equal(es.headers.get('content-type'),'text/event-stream');const reader=es.body.getReader();const chunk=await reader.read();assert.ok(new TextDecoder().decode(chunk.value).includes('snapshot'));

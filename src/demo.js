@@ -8,14 +8,14 @@ export function makeDemo(){
     exampleSheet('s3','Maelis, a Erudita','Gnomo','Mago',{physical:1,skill:1,vigor:1,mental:5},9,'p3','Procura mapas do antigo observatório.'),
     exampleSheet('s4','Kael, o Errante','Humano','Armadilheiro',{physical:2,skill:3,vigor:1,mental:2},11,'p4','Reconhece sinais dos cultistas nas ruínas.')
   ];
-  const heroes=sheets.map((s,i)=>({id:`t${i+1}`,sheetId:s.id,name:s.name,x:160+i*80,y:440,size:54,rotation:0,visible:true,locked:false,ownerId:s.playerId,hp:s.hp,maxHp:s.maxHp,color:['#68cfd0','#e1aa72','#ae95da','#8ac78b'][i],conditions:[]}));
-  const foes=[{id:'g1',name:'Sentinela Corrompida',x:670,y:300,size:60,hp:15,maxHp:15,color:'#c36a62',visible:false,locked:false,ownerId:null,conditions:[]},
-    {id:'g2',name:'Rastejante',x:760,y:340,size:48,hp:8,maxHp:8,color:'#8a667e',visible:true,locked:false,ownerId:null,conditions:[]}];
+  const heroes=sheets.map((s,i)=>({id:`t${i+1}`,sheetId:s.id,name:s.name,x:150+i*60,y:450,size:54,rotation:0,visible:true,locked:false,ownerId:s.playerId,hp:s.hp,maxHp:s.maxHp,color:['#68cfd0','#e1aa72','#ae95da','#8ac78b'][i],conditions:[]}));
+  const foes=[{id:'g1',name:'Sentinela Corrompida',x:690,y:330,size:60,hp:15,maxHp:15,color:'#c36a62',visible:false,locked:false,ownerId:null,conditions:[]},
+    {id:'g2',name:'Rastejante',x:750,y:390,size:48,hp:8,maxHp:8,color:'#8a667e',visible:true,locked:false,ownerId:null,conditions:[]}];
   return {id:uid(),name:'Ecos de Obscure — demonstração',description:'Um povoado abandonado, uma masmorra e uma presença sob a pedra.',
     version:1,createdAt:Date.now(),notes:'SEGREDO DO MESTRE: o sino do povoado desperta a sentinela corrompida.',
     sceneId:'dungeon',scenes:[
       {id:'dungeon',name:'Cripta sob a Vigília',src:'assets/dungeon.svg',width:1200,height:800,grid:{enabled:true,size:60},fog:[{x:590,y:145,w:520,h:435}],tokens:[...heroes,...foes],markers:[]},
-      {id:'village',name:'Povoado de Corval',src:'assets/village.svg',width:1200,height:800,grid:{enabled:true,size:60},fog:[],tokens:heroes.map(t=>({...t,id:`v${t.id}`,x:180+(Number(t.id[1])-1)*85,y:500})),markers:[]}
+      {id:'village',name:'Povoado de Corval',src:'assets/village.svg',width:1200,height:800,grid:{enabled:true,size:60},fog:[],tokens:heroes.map(t=>({...t,id:`v${t.id}`,x:210+(Number(t.id[1])-1)*60,y:510})),markers:[]}
     ],sheets,rollHistory:[],audioFiles:[{id:'sound-bell',name:'Sino da cripta',category:'Narrativa',url:'assets/sino_cripta.wav'},{id:'sound-sword',name:'Golpe de espada',category:'Combate',url:'assets/espada.wav'},{id:'sound-wind',name:'Vento sombrio',category:'Ambiente',url:'assets/vento_sombrio.wav'}],combat:{round:1,index:0,entries:[...heroes,...foes].map((t,i)=>({tokenId:t.id,name:t.name,initiative:12-i*2,hp:t.hp,maxHp:t.maxHp,conditions:[],id:uid()}))},
     logs:[],slotNames:{p1:'Jogador 1',p2:'Jogador 2',p3:'Jogador 3',p4:'Jogador 4'},settings:{animations:true,snap:true},connection:null};
 }

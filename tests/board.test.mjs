@@ -52,7 +52,9 @@ test('O tabuleiro não reinicia o Canvas nem recria o mapa a cada movimento de t
   events.get('pointerup')(ev(start.x+40,start.y+20));nextFrame();
   assert.equal(resets,2,'O arrasto não pode reinicializar o Canvas');
   assert.equal(offscreenCreated,1,'O arrasto não pode recriar o bitmap do mapa');
-  assert.notEqual(token.x,160,'O token realmente precisa ser movimentado');
+  assert.notEqual(token.x,150,'O token realmente precisa ser movimentado');
+  assert.equal((token.x - 30) % 60,0,'O centro do token deve cair no centro da coluna');
+  assert.equal((token.y - 30) % 60,0,'O centro do token deve cair no centro da linha');
   rect={...rect,width:360};resizeHandler();
   assert.equal(resets,3,'Alteração real da largura ajusta apenas uma dimensão');
 });
