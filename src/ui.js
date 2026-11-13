@@ -1,4 +1,4 @@
-import {RACES,ATTRIBUTE_KEYS,ATTRIBUTE_LABELS,derived,validateAttributes,esc,uid} from './rules.js';
+import {RACES,RACE_NAMES,CLASS_NAMES,CHARACTER_CREATION,ATTRIBUTE_KEYS,ATTRIBUTE_LABELS,derived,sheetSummary,qualityLimit,listedQualities,spentAbilityPoints,validateCreation,testFormula,esc,uid} from './rules.js';
 import {scene,invalidate,fitScene,zoomAt} from './board.js';
 import {snapTokenPosition} from './grid.js';
 let app;
@@ -34,22 +34,28 @@ function tokenPanel(){const s=scene(),master=app.role==='master';const tokens=s.
       <div class="button-row">${b('import-token-image','↑ Imagem')}${b('delete-token','Remover','danger')}</div>`:''}
       ${t?.sheetId?`<div class="notice">Vinculado à ficha: ${E(c.sheets.find(s=>s.id===t.sheetId)?.name||'não encontrada')}</div>`:''}`:''}`;}
 function sheetPanel(){const c=app.campaign,master=app.role==='master',sheets=master?c.sheets:c.sheets.filter(s=>s.playerId===app.playerId);if(!sheets.find(s=>s.id===app.selectedSheetId))app.selectedSheetId=sheets[0]?.id||null;
-  const s=sheets.find(s=>s.id===app.selectedSheetId);const errs=s?validateAttributes(s):[],der=s?derived(s.attributes):null;
+  const s=sheets.find(s=>s.id===app.selectedSheetId);const errs=s?validateCreation(s):[],der=s?sheetSummary(s):null;
   const readonlyField=f=>master?'':(['notes','history','equipment','weapons','skills','abilities','spells'].includes(f)?'':' disabled');
   const input=(f,label,multi=false)=>`<label>${label}${multi?`<textarea data-sheet-field="${f}"${readonlyField(f)}>${E(s[f]||'')}</textarea>`:`<input data-sheet-field="${f}" value="${E(s[f]??'')}"${readonlyField(f)}>`}</label>`;
   return `<div class="heading"><h3>Fichas digitais</h3>${master?b('add-sheet','+ Ficha','primary'):''}</div>${sheets.map(x=>item(x.id,x.name,`${x.race} · ${x.cls} · Nível ${x.level}`,'sheet',x.id===s?.id)).join('')}
   ${s?`<hr class="rule"><h4>${E(s.name)}</h4>${input('name','Nome')}
-  <div class="grid2"><label>Raça<select data-sheet-field="race"${readonlyField('race')}>${[...Object.keys(RACES),...(!RACES[s.race]?[s.race]:[])].map(r=>`<option value="${E(r)}"${sel(r,s.race)}>${E(r)}</option>`).join('')}</select></label>${input('cls','Classe')}</div>
+  <div class="grid2"><label>Raça<select data-sheet-field="race"${readonlyField('race')}>${[...RACE_NAMES,...(!RACES[s.race]?[s.race]:[])].map(r=>`<option value="${E(r)}"${sel(r,s.race)}>${E(r)}</option>`).join('')}</select></label><label>Classe<select data-sheet-field="cls"${readonlyField('cls')}>${[...CLASS_NAMES,...(!CLASS_NAMES.includes(s.cls)?[s.cls]:[])].map(v=>`<option value="${E(v)}"${sel(v,s.cls)}>${E(v)}</option>`).join('')}</select></label></div>
   <div class="grid2"><label>Nível<input type="number" min="1" max="30" data-sheet-field="level" value="${s.level}"${readonlyField('level')}></label><label>Jogador<select data-sheet-field="playerId"${readonlyField('playerId')}><option value="">Mestre</option>${Object.entries(c.slotNames||{}).map(([id,name])=>`<option value="${id}"${sel(s.playerId,id)}>${E(name)}</option>`).join('')}</select></label></div>
   <h4>Atributos</h4><div class="grid4">${ATTRIBUTE_KEYS.map(k=>`<label title="Limite: ${RACES[s.race]?.[k]||'consultar livro'}">${ATTRIBUTE_LABELS[k]}<input type="number" min="1" max="20" data-attribute="${k}" value="${s.attributes?.[k]||0}"${disabled()}></label>`).join('')}</div>
-  <div class="notice">${errs.length?`<span class="warn">${errs.map(E).join(' ')}</span>`:`<span class="good">✓ Distribuição válida dos atributos-base</span>`}<div class="mini">Limites da raça: ${RACES[s.race]?ATTRIBUTE_KEYS.map(k=>`${ATTRIBUTE_LABELS[k][0]}${RACES[s.race][k]}`).join(' · '):'Não cadastrados na 0.1.0'}</div></div>
-  <h4>Subatributos calculados</h4><div class="grid2">${Object.entries({Iniciativa:der.initiative,Fadiga:der.fatigue,Vontade:der.will,Resistência:der.resistance,Defesa_base:der.defense}).map(([k,v])=>`<div class="pill">${k.replace('_',' ')}: <strong>${v}</strong></div>`).join('')}</div>
+  <div class="notice">${errs.length?`<span class="warn">${errs.map(E).join(' ')}</span>`:`<span class="good">✓ Distribuição válida dos atributos-base</span>`}<div class="mini">Limites da raça: ${RACES[s.race]?ATTRIBUTE_KEYS.map(k=>`${ATTRIBUTE_LABELS[k][0]}${RACES[s.race][k]}`).join(' · '):'Limites ainda não conferidos'}</div></div>
+  <div class="mini">${RACES[s.race]?.note?E(RACES[s.race].note)+' · ':''}${RACES[s.race]?`Raça catalogada no PDF, página ${RACES[s.race].sourcePage}.`:''} Os bônus raciais excepcionais não alteram os atributos-base automaticamente.</div>
+  <h4>Subatributos e combate</h4><div class="grid2">${Object.entries({Iniciativa:der.initiative,Fadiga:der.fatigue,Vontade:der.will,Resistência:der.resistance,Defesa_total:der.defenseTotal,Dano_desarmado:der.unarmedDamage}).map(([k,v])=>`<div class="pill">${k.replace('_',' ')}: <strong>${v}</strong></div>`).join('')}</div>
   <div class="grid2"><label>PV atuais<input type="number" data-sheet-field="hp" value="${s.hp}"${disabled()}></label><label>PV máximos<input type="number" data-sheet-field="maxHp" value="${s.maxHp}"${disabled()}></label></div>
   <div class="grid2"><label>Bônus de defesa<input type="number" data-sheet-field="armor" value="${s.armor||0}"${disabled()}></label><label>Movimento (m)<input value="${RACES[s.race]?.movement??'?'}" disabled></label></div>
-  <div class="button-row">${b('sheet-test-physical','D20 + Físico')}${b('sheet-test-skill','D20 + Habilidade')}${b('sheet-test-mental','D20 + Mental')}</div>
+  <div class="button-row">${b('sheet-test-physical','⚄ Físico')}${b('sheet-test-skill','⚄ Habilidade')}${b('sheet-test-mental','⚄ Mental')}${b('sheet-test-vigor','⚄ Vigor')}${b('sheet-test-initiative','⚄ Iniciativa')}${b('sheet-test-resistance','⚄ Resistência')}${b('sheet-test-will','⚄ Vontade')}</div>
+  <hr class="rule"><h4>Criação e progressão (nível 1)</h4>
+  <div class="grid2"><div class="pill">Qualidades: <strong>${listedQualities(s).length}/${qualityLimit(s)}</strong></div><div class="pill">Habilidades: <strong>${spentAbilityPoints(s)}/${CHARACTER_CREATION.startingAbilityPoints} pts</strong></div></div>
+  <p class="mini">Qualidades: uma por linha no campo abaixo. Humano tem direito a uma qualidade extra. Custos de habilidades devem ser conferidos nas páginas da classe do livro. Os pontos excedentes são destacados e nunca apagados automaticamente.</p>
+  <div class="heading"><h4>Habilidades compradas (registro de pontos)</h4>${master?b('add-class-power','+ Habilidade'):''}</div>
+  ${(s.classPowers||[]).map((pow,i)=>`<div class="power-line"><label>Nome<input data-power-field="name" data-power-index="${i}" value="${E(pow.name||'')}"${disabled()} placeholder="Habilidade conforme o livro"></label><div class="grid2"><label>Níveis<input data-power-field="levels" data-power-index="${i}" type="number" min="1" max="30" value="${E(pow.levels??1)}"${disabled()}></label><label>Custo por nível<input data-power-field="costPerLevel" data-power-index="${i}" type="number" min="1" max="15" value="${E(pow.costPerLevel??1)}"${disabled()}></label></div>${master?`<div class="button-row"><button data-action="remove-class-power" data-power-index="${i}" class="danger">Remover habilidade</button></div>`:''}</div>`).join('')||'<p class="mini">Nenhuma habilidade comprada registrada.</p>'}
   <hr class="rule"><h4>Ficha em PDF</h4><p class="mini">${E(s.pdfName||'Nenhum PDF anexado. A anexação não extrai automaticamente os campos.')}</p><div class="button-row">${master?b('attach-pdf','↑ Anexar PDF'):''}${s.pdfKey?b('view-pdf','Abrir PDF'):''}</div>
-  ${input('skills','Perícias',true)}${input('qualities','Qualidades',true)}${input('flaws','Defeitos',true)}${input('equipment','Equipamentos e inventário',true)}${input('weapons','Armas e armaduras',true)}${input('abilities','Habilidades',true)}${input('spells','Magias',true)}${input('history','Histórico',true)}${input('notes','Notas de jogador',true)}
-  ${master?b('delete-sheet','Excluir ficha','danger'):''}<p class="mini">A versão 0.1.0 valida cinco limites raciais extraídos do livro. Regras de classes e vida permanecem editáveis; não há cálculo automático universal para elas.</p>`:
+  ${input('skills','Perícias',true)}${input('qualities','Qualidades (uma por linha)',true)}${input('flaws','Defeitos',true)}${input('equipment','Equipamentos e inventário',true)}${input('weapons','Armas e armaduras',true)}${input('abilities','Habilidades',true)}${input('spells','Magias',true)}${input('history','Histórico',true)}${input('notes','Notas de jogador',true)}
+  ${master?b('delete-sheet','Excluir ficha','danger'):''}<p class="mini">Versão 0.2.0: 27 raças, 27 classes, orçamento de qualidades e cinco pontos iniciais de habilidades. PV e habilidades específicas continuam sob controle do Mestre até serem verificados no livro.</p>`:
     `<p class="notice">Sem fichas disponíveis. ${master?'Crie uma ficha para começar.':'Peça ao Mestre para associar um personagem ao seu código.'}</p>`}`;}
 function dicePanel(){const c=app.campaign;return `<h3>Rolagem de dados</h3><label>Fórmula<input id="dice-formula" autocomplete="off" value="${E(app.rollInput||'1D20')}" placeholder="2D6+3"></label>
     <div class="button-row">${[4,6,8,10,12,20].map(n=>b(`die-${n}`,`D${n}`)).join('')}</div>
@@ -128,7 +134,7 @@ export function initUI(a){app=a;
     if(act==='roll'){app.rollInput=document.getElementById('dice-formula')?.value||'1D20';app.rollPrivate=!!document.getElementById('private-roll')?.checked;await app.rollDice(app.rollInput,app.rollPrivate);return;}
     if(act.startsWith('die-')){app.rollInput=`1D${act.slice(4)}`;app.render();return;}
     if(act==='roll-initiative'){const sh=c.sheets.find(s=>s.id===app.selectedSheetId)||c.sheets[0];await app.rollDice(`1D20+${sh?derived(sh.attributes).initiative:0}`);return;}
-    if(act.startsWith('sheet-test-')){const sh=c.sheets.find(s=>s.id===app.selectedSheetId);if(sh)await app.rollDice(`1D20+${sh.attributes[act.slice(11)]||0}`);return;}
+    if(act.startsWith('sheet-test-')){const sh=c.sheets.find(s=>s.id===app.selectedSheetId);if(sh)await app.rollDice(testFormula(sh,act.slice(11)));return;}
     if(act==='new-campaign'&&master){await app.newCampaign(prompt('Nome da nova campanha:')||'Nova campanha');return;}
     if(act==='demo'&&master){await app.restoreDemo();return;}
     if(act==='delete-campaign'&&master){await app.deleteCampaign();return;}
@@ -145,7 +151,9 @@ export function initUI(a){app=a;
     if(act==='delete-token'&&master){s.tokens=s.tokens.filter(t=>t.id!==app.selectedTokenId);app.selectedTokenId=null;app.changed('Token excluído');app.render();return;}
     if(act==='attach-pdf'&&master){document.getElementById('file-pdf').click();return;}
     if(act==='view-pdf'){await app.viewSheetPdf();return;}
-    if(act==='add-sheet'&&master){const id=uid();c.sheets.push({id,name:'Novo personagem',race:'Humano',cls:'Guerreiro',level:1,attributes:{physical:2,skill:2,vigor:2,mental:2},hp:10,maxHp:10,armor:0,skills:'',qualities:'',flaws:'',equipment:'',weapons:'',abilities:'',spells:'',history:'',notes:'',playerId:''});app.selectedSheetId=id;app.changed('Ficha criada');app.render();return;}
+    if(act==='add-sheet'&&master){const id=uid();c.sheets.push({id,name:'Novo personagem',race:'Humano',cls:'Guerreiro',level:1,attributes:{physical:2,skill:2,vigor:2,mental:2},hp:10,maxHp:10,armor:0,skills:'',qualities:'',flaws:'',equipment:'',weapons:'',abilities:'',spells:'',history:'',notes:'',playerId:'',classPowers:[]});app.selectedSheetId=id;app.changed('Ficha criada');app.render();return;}
+    if(act==='add-class-power'&&master){const sheet=c.sheets.find(x=>x.id===app.selectedSheetId);if(!sheet)return;sheet.classPowers??=[];sheet.classPowers.push({id:uid(),name:'',levels:1,costPerLevel:1});app.changed('Habilidade adicionada');app.render();return;}
+    if(act==='remove-class-power'&&master){const sheet=c.sheets.find(x=>x.id===app.selectedSheetId),i=Number(el.dataset.powerIndex);if(!Array.isArray(sheet?.classPowers)||!Number.isInteger(i)||i<0||i>=sheet.classPowers.length)return;sheet.classPowers.splice(i,1);app.changed('Habilidade removida');app.render();return;}
     if(act==='delete-sheet'&&master){c.sheets=c.sheets.filter(s=>s.id!==app.selectedSheetId);app.selectedSheetId=c.sheets[0]?.id||null;app.changed('Ficha excluída');app.render();return;}
     if(act==='combat-add'&&master){const opts=s.tokens.filter(t=>!c.combat.entries.some(x=>x.tokenId===t.id));if(!opts.length){app.toast('Todos os tokens já estão no combate.');return;}
       const t=opts[0];c.combat.entries.push({id:uid(),tokenId:t.id,name:t.name,initiative:0,hp:t.hp??0,maxHp:t.maxHp??0,conditions:[]});app.changed('Participante incluído');app.render();return;}
@@ -197,6 +205,10 @@ export function initUI(a){app=a;
     if(el.dataset.tokenField&&master){const t=s.tokens.find(t=>t.id===app.selectedTokenId);if(!t)return;const f=el.dataset.tokenField;if(['hp','maxHp','size','rotation'].includes(f))t[f]=Number(val);else if(f==='conditions')t[f]=String(val).split(',').map(x=>x.trim()).filter(Boolean);else if(['visible','locked'].includes(f))t[f]=!!val;else t[f]=val;t.ownerId=t.ownerId||null;if(['hp','maxHp','conditions'].includes(f)){const combat=c.combat.entries.find(x=>x.tokenId===t.id);if(combat)combat[f]=t[f];const sh=c.sheets.find(x=>x.id===t.sheetId);if(sh&&f!=='conditions')sh[f]=t[f];}app.changed();app.render();return;}
     const sheet=c.sheets.find(s=>s.id===app.selectedSheetId);
     if(el.dataset.attribute&&master&&sheet){sheet.attributes[el.dataset.attribute]=Number(val);app.changed();app.render();return;}
+    if(el.dataset.powerField&&master&&sheet){const i=Number(el.dataset.powerIndex),pow=sheet.classPowers?.[i];if(!pow)return;
+      if(!['name','levels','costPerLevel'].includes(el.dataset.powerField))return;
+      pow[el.dataset.powerField]=el.dataset.powerField==='name'?String(val).slice(0,140):Number(val);app.changed();app.render();return;
+    }
     if(el.dataset.sheetField&&sheet){const f=el.dataset.sheetField;
       if(!master&&!['notes','history','equipment','weapons','skills','abilities','spells'].includes(f))return;
       sheet[f]=['level','hp','maxHp','armor'].includes(f)?Number(val):val;

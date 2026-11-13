@@ -1,10 +1,5 @@
-export const RACES = {
-  'Humano': { physical:5, skill:5, vigor:5, mental:5, movement:8 },
-  'Anão': { physical:6, skill:5, vigor:6, mental:3, movement:6 },
-  'Elfo': { physical:4, skill:7, vigor:4, mental:4, movement:9 },
-  'Gnomo': { physical:5, skill:4, vigor:4, mental:7, movement:6 },
-  'Zetharin': { physical:5, skill:5, vigor:5, mental:5, movement:7 }
-};
+import {RACES, RACE_NAMES, CLASS_NAMES, CHARACTER_CREATION} from './compendium.js';
+export {RACES, RACE_NAMES, CLASS_NAMES, CHARACTER_CREATION};
 export const ATTRIBUTE_KEYS = ['physical','skill','vigor','mental'];
 export const ATTRIBUTE_LABELS = {physical:'Físico', skill:'Habilidade', vigor:'Vigor', mental:'Mental'};
 export function derived(a){ return {
@@ -19,6 +14,36 @@ export function validateAttributes(sheet){
   const total=ATTRIBUTE_KEYS.reduce((s,k)=>s+(Number(a[k])||0),0);
   if(sheet.level===1 && total!==8) errors.push(`No nível 1, a soma dos atributos-base deve ser 8 (atual: ${total}).`);
   return errors;
+}
+// A vida total depende da classe; não calculamos PV sem dados específicos da classe.
+export function sheetSummary(sheet){
+  const base=derived(sheet.attributes||{}),armor=Number(sheet.armor||0),a=sheet.attributes||{};
+  return {...base,defenseTotal:base.defense+armor,meleeAttack:Number(a.physical||0),rangedAttack:Number(a.skill||0),unarmedDamage:Number(a.physical||0)+1,
+    movement:RACES[sheet.race]?.movement??null,sourcePage:RACES[sheet.race]?.sourcePage??null};
+}
+export function qualityLimit(sheet){return CHARACTER_CREATION.qualityChoices+(sheet.race==='Humano'?CHARACTER_CREATION.humanExtraQuality:0);}
+export function listedQualities(sheet){return String(sheet.qualities||'').split(/\r?\n/).map(v=>v.trim()).filter(Boolean);}
+export function spentAbilityPoints(sheet){return (sheet.classPowers||[]).reduce((sum,a)=>sum+Number(a.levels||0)*Number(a.costPerLevel||0),0);}
+export function validateCreation(sheet){
+  const errors=validateAttributes(sheet);
+  if(Number(sheet.level)!==1)return errors;
+  const qualities=listedQualities(sheet);
+  if(qualities.length>qualityLimit(sheet))errors.push(`Qualidades: ${qualities.length}/${qualityLimit(sheet)} selecionadas no nível 1.`);
+  const powers=sheet.classPowers||[];
+  if(!Array.isArray(powers))return [...errors,'Lista de habilidades compradas inválida.'];
+  for(const p of powers){
+    if(!String(p.name||'').trim())errors.push('Informe o nome da habilidade comprada.');
+    if(!Number.isInteger(Number(p.levels))||Number(p.levels)<1)errors.push('Níveis de habilidade devem ser inteiros positivos.');
+    if(!Number.isInteger(Number(p.costPerLevel))||Number(p.costPerLevel)<1)errors.push('O custo por nível deve ser inteiro e positivo.');
+  }
+  const cost=spentAbilityPoints(sheet);
+  if(cost>CHARACTER_CREATION.startingAbilityPoints)errors.push(`Habilidades: ${cost}/${CHARACTER_CREATION.startingAbilityPoints} pontos usados no nível 1.`);
+  return errors;
+}
+export function testFormula(sheet,key){
+  const a=sheetSummary(sheet);const values={physical:a.meleeAttack,skill:a.rangedAttack,mental:Number(sheet.attributes?.mental||0),vigor:Number(sheet.attributes?.vigor||0),initiative:a.initiative,will:a.will,resistance:a.resistance};
+  if(!Object.prototype.hasOwnProperty.call(values,key))throw Error('Atributo ou teste desconhecido.');
+  const n=values[key];return `1D20${n>=0?'+':''}${n}`;
 }
 export function roll(expression, rng=()=>crypto.getRandomValues(new Uint32Array(1))[0]/4294967296){
   const compact=String(expression).replace(/\s/g,'').toUpperCase();

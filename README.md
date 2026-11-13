@@ -1,6 +1,18 @@
-# TENEBRIA VTT 0.1.3 — Mesa Presencial e Mesa Online
+# TENEBRIA VTT 0.2.0 — Fichas e regras de criação
 
 Mesa virtual dark fantasy para **Tenebria Revisado 3.0**. Uma única PWA para celulares Android, computadores e navegadores compatíveis de televisores/projetores. O mesmo núcleo guarda campanhas, mapas, fichas, tokens, dados, combate, sons e permissões. Desenvolvido sobre a base **0.1.2**, sem reiniciar o projeto.
+
+## Novidades da 0.2.0 — primeiro incremento de fichas avançadas
+
+- **27 raças catalogadas** diretamente do livro *Tenebria Revisado 3.0*, com seus limites Físico/Habilidade/Vigor/Mental e deslocamento básico. O Satirino tem 12 m na forma verdadeira e 7 m na forma oculta; a ficha mostra essa ressalva. O campo de raça mantém valores legados/customizados e não modifica atributos ao trocar de raça.
+- **27 classes oficiais** disponíveis em lista, incluindo Espadachim Oriental, Mago, Monge, Sacerdote, Patrulheiro e Sem Caminho. Classes personalizadas de fichas antigas continuam exibidas.
+- **Criação**: 8 pontos iniciais nos quatro atributos-base (nenhum pode ser zero), 2 qualidades no nível 1 (3 para Humanos com Versátil) e registro estruturado das habilidades compradas (5 pontos iniciais; custo × nível informado pelo Mestre conforme o livro). Há avisos não destrutivos se os limites forem ultrapassados.
+- **Combate e testes a partir da ficha**: iniciativa, fadiga, vontade, resistência, defesa total = Vigor + equipamento, dano desarmado = Físico + 1; botões de teste D20 para Físico, Habilidade, Mental, Vigor, Iniciativa, Vontade e Resistência.
+- **Compatibilidade**: `classPowers` é um campo opcional; campanhas antigas continuam abrindo. Atributos, classes, fichas, mapas, sessões e áudio continuam compartilhados entre mesa presencial e online.
+
+**Limites conscientes:** a vida máxima depende da classe e não é calculada automaticamente sem a tabela da classe. O campo de habilidade comprada exige que o Mestre confira o custo e as restrições na obra; o aplicativo não declara verificada uma regra ainda não codificada. Traços raciais como Vigoroso (Anão) são descritos, mas não inseridos automaticamente nos atributos-base, para evitar exceder limites raciais ou sobrescrever escolhas. A lista de raças/classes é uma referência condensada; o PDF do livro não é distribuído.
+
+**Fonte das regras:** PDF *TENEBRIA REVISADO 3.0*: catálogo de raças nas páginas 14–69; atributos e subatributos na página 71; classes nas páginas 74–154; regra de cinco pontos de habilidades na página 73. Numerações de páginas aqui são as páginas do arquivo PDF, não necessariamente a paginação impressa.
 
 ## Novidades da 0.1.3
 
@@ -66,7 +78,8 @@ src/board.js              renderização Canvas, token, grade, névoa, medição
 src/grid.js               encaixe no centro das casas
 src/network.js            conexão configurável, API HTTP e SSE
 src/storage.js            IndexedDB e importação/exportação
-src/rules.js              rolagens, atributos e limites de Tenebria
+src/rules.js              rolagens, validação e cálculos da ficha
+src/compendium.js         catálogo de 27 raças e 27 classes
 src/demo.js               campanha de demonstração
 src/style.css             visual responsivo dark fantasy
 server/index.mjs          backend Node: salas, SSE, autorização, áudio
@@ -83,6 +96,6 @@ Execute `npm test`. Os testes incluem regras e limites de Tenebria, renderizaç�
 
 **Testes físicos ainda necessários:** Moto G34 com arrasto contínuo de tokens, estabilidade de Canvas, reprodução de áudio após toque, navegador do HY3000, modo horizontal, rede Wi-Fi sem internet e carga com muitos participantes. O Chromium automatizado deste ambiente não completou a inicialização; não tratamos a revisão visual como concluída.
 
-**Limitações adicionais:** QR Code ainda não implementado (há código e links de convite); sessões remotas exigem backend HTTPS; o servidor de exemplo usa arquivos JSON em uma única instância, não foi projetado para replicação horizontal; streaming de áudio importado e sincronização temporal precisa não existem; imagens do mapa compartilhado são incorporadas como WebP no estado e podem ser pesadas; até 9 MB por requisição. A PWA é instalável apenas em origens consideradas seguras pelo navegador (HTTPS ou localhost), e não necessariamente por HTTP de IP LAN. As fichas de classes e traços avançados estão previstos para versões futuras.
+**Limitações adicionais:** QR Code ainda não implementado (há código e links de convite); sessões remotas exigem backend HTTPS; o servidor de exemplo usa arquivos JSON em uma única instância, não foi projetado para replicação horizontal; streaming de áudio importado e sincronização temporal precisa não existem; imagens do mapa compartilhado são incorporadas como WebP no estado e podem ser pesadas; até 9 MB por requisição. A PWA é instalável apenas em origens consideradas seguras pelo navegador (HTTPS ou localhost), e não necessariamente por HTTP de IP LAN. A automatização detalhada das habilidades e traços de classes ainda será ampliada ao longo da versão 0.2.x.
 
 O livro completo **TENEBRIA REVISADO 3.0** não é distribuído no projeto.
